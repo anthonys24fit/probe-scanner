@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>DSC System Test</title>
+<style>
+:root{--g:#0a7;--y:#e90;--r:#d33;--b:#ddd}
+body{font-family:system-ui,sans-serif;margin:0 0 calc(190px + env(safe-area-inset-bottom));background:#f6f6f6}
+h1{font-size:20px;margin:0;padding:12px 16px;background:#124;color:#fff}
+.step{background:#fff;margin:10px;padding:12px;border-radius:12px}
+h2{font-size:17px;margin:0 0 8px}
+label{display:block;font-size:14px;margin-top:8px}
+input,select{font-size:18px;width:100%;box-sizing:border-box;padding:10px;border:1px solid #bbb;border-radius:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.res{margin-top:10px;padding:10px;border-radius:8px;border-left:8px solid var(--b);background:#fafafa;font-size:16px}
+.G{border-color:var(--g)}.Y{border-color:var(--y)}.R{border-color:var(--r)}
+.small{font-size:12px;color:#555}
+button{font-size:18px;padding:14px;border:0;border-radius:12px;background:#124;color:#fff;width:100%;margin-top:8px}
+button.clr{background:#777}
+#bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ccc}
+</style></head><body>
+<h1>DSC System Test <span class="small" style="color:#9cf">typed readings &middot; nothing is saved or sent</span></h1>
+
+<div class="step"><h2>1 of 6 &middot; System</h2>
+<label>Job / customer name<input id="job" autocomplete="off"></label>
+<div class="row"><label>Make<input id="make" autocomplete="off"></label><label>Model<input id="model" autocomplete="off"></label></div>
+<div class="row"><label>Serial<input id="serial" autocomplete="off"></label><label>Tons<input id="tons" type="number" step="any"></label></div>
+<div class="row"><label>Refrigerant<select id="ref"><option value="">(pick)</option><option>R-410A</option><option>R-22</option><option>R-454B</option><option>R-32</option><option>Other</option></select></label>
+<label>Metering<select id="meter"><option value="">(pick)</option><option>TXV</option><option>Fixed orifice</option></select></label></div></div>
+
+<div class="step"><h2>2 of 6 &middot; Refrigerant (&deg;F)</h2>
+<p class="small">Saturation temps come from your gauge or probe. This page has no pressure tables and invents no targets.</p>
+<div class="row"><label>Suction sat temp<input id="ssat" type="number" step="any"></label><label>Suction line temp<input id="sline" type="number" step="any"></label></div>
+<div class="row"><label>Liquid sat temp<input id="lsat" type="number" step="any"></label><label>Liquid line temp<input id="lline" type="number" step="any"></label></div>
+<div class="row"><label>Target superheat (set per chart)<input id="tsh" type="number" step="any"></label><label>Target subcool (nameplate)<input id="tsc" type="number" step="any"></label></div>
+<div class="res" id="r_sh">Superheat: enter readings.</div>
+<div class="res" id="r_sc">Subcool: enter readings.</div></div>
+
+<div class="step"><h2>3 of 6 &middot; Air (&deg;F)</h2>
+<div class="row"><label>Return air<input id="ra" type="number" step="any"></label><label>Supply air<input id="sa" type="number" step="any"></label></div>
+<div class="res" id="r_air">Enter readings.</div></div>
+
+<div class="step"><h2>4 of 6 &middot; Static pressure (in. w.c.)</h2>
+<p class="small">Type both as positive numbers (a minus sign is ignored).</p>
+<div class="row"><label>Supply side<input id="sp" type="number" step="any"></label><label>Return side<input id="rp" type="number" step="any"></label></div>
+<label>Rated max total (type from the nameplate)<input id="maxtesp" type="number" step="any"></label>
+<div class="res" id="r_sp">Enter readings.</div></div>
+
+<div class="step"><h2>5 of 6 &middot; Airflow</h2>
+<label>Measured CFM (flow hood or probe)<input id="cfm" type="number" step="any"></label>
+<div class="res" id="r_cfm">Enter tons and CFM.</div></div>
+
+<div class="step"><h2>6 of 6 &middot; Electrical</h2>
+<p class="small">Type nameplate values too, or that line shows "not checked".</p>
+<div class="row"><label>Condenser volts<input id="cv" type="number" step="any"></label><label>Rated volts<input id="cvr" type="number" step="any"></label></div>
+<div class="row"><label>Condenser amps<input id="ca" type="number" step="any"></label><label>RLA (nameplate)<input id="rla" type="number" step="any"></label></div>
+<div class="row"><label>Air handler volts<input id="av" type="number" step="any"></label><label>Rated volts<input id="avr" type="number" step="any"></label></div>
+<div class="row"><label>Air handler amps<input id="aa" type="number" step="any"></label><label>FLA (nameplate)<input id="fla" type="number" step="any"></label></div>
+<div class="res" id="r_cel">Condenser: enter readings.</div>
+<div class="res" id="r_ael">Air handler: enter readings.</div></div>
+
+<div id="bar"><button id="copy">Copy summary (paste into a note)</button><button class="clr" id="clear">New job (clear everything)</button></div>
+<script>
+/* "Typical" bands: the owner can change these numbers in one place. They are NOT typed targets. */
+const BANDS={superheat:[3,6],subcool:[2,4],split:[[14,22],[12,24]],cfmPerTon:[[350,400],[300,450]],ampsHigh:[100,115],ampsLowYellow:50,voltsPct:[[90,110],[85,115]],staticYellow:1.2};
+const $=id=>document.getElementById(id);
+const r2=x=>Math.round(x*100)/100;
+const n=id=>{const v=$(id).value;if(v==='')return null;const x=parseFloat(v);return isFinite(x)?x:null};
+const out={};
+function show(id,cls,word,txt){const e=$(id);e.className='res '+cls;e.textContent=(word?word+': ':'')+txt;out[id]=(word?word+' - ':'')+txt}
+const W={G:'OK',Y:'CHECK',R:'BAD','':'NOT CHECKED'};
+function tol(v,t,g,y){const d=r2(Math.abs(v-t));return d<=g?'G':d<=y?'Y':'R'}
+function inband(v,b){return v>=b[0][0]&&v<=b[0][1]?'G':v>=b[1][0]&&v<=b[1][1]?'Y':'R'}
+function fin(id,txt,c){show(id,c,W[c],txt)}
+function calc(){
+ const ss=n('ssat'),sl=n('sline'),ls=n('lsat'),ll=n('lline'),tsh=n('tsh'),tsc=n('tsc');
+ if(ss!=null&&sl!=null){const sh=r2(sl-ss);fin('r_sh','Superheat '+sh+'°F'+(tsh!=null?' (target '+tsh+')':' (no target typed)'),tsh!=null?tol(sh,tsh,BANDS.superheat[0],BANDS.superheat[1]):'')}else show('r_sh','','','Superheat: enter readings.');
+ if(ls!=null&&ll!=null){const sc=r2(ls-ll);fin('r_sc','Subcool '+sc+'°F'+(tsc!=null?' (target '+tsc+')':' (no target typed)'),tsc!=null?tol(sc,tsc,BANDS.subcool[0],BANDS.subcool[1]):'')}else show('r_sc','','','Subcool: enter readings.');
+ const ra=n('ra'),sa=n('sa');
+ if(ra!=null&&sa!=null){const d=r2(ra-sa);fin('r_air','Temp split '+d+'°F (typical cooling 14-22)',inband(d,BANDS.split))}else show('r_air','','','Enter readings.');
+ const sp=n('sp'),rp=n('rp'),mx=n('maxtesp');
+ if(sp!=null&&rp!=null){const t=r2(Math.abs(sp)+Math.abs(rp));fin('r_sp','Total external static '+t+' in. w.c.'+(mx!=null&&mx>0?' (rated max '+mx+')':' (no max typed)'),mx!=null&&mx>0?(t<=mx?'G':t<=r2(mx*BANDS.staticYellow)?'Y':'R'):'')}else show('r_sp','','','Enter readings.');
+ const cfm=n('cfm'),tons=n('tons');
+ if(cfm!=null&&tons!=null&&tons>0&&cfm>0){const p=r2(cfm/tons);fin('r_cfm',cfm+' CFM = '+p+' CFM per ton (typical 350-400)',inband(p,BANDS.cfmPerTon))}else show('r_cfm','','','Enter tons and CFM (both above 0).');
+ function elec(id,name,v,vr,a,ar){
+  const parts=[];let cls=[];
+  if(a!=null){
+   if(a<=0){parts.push(name+' amps '+a+' looks wrong (need above 0)');cls.push('R')}
+   else if(ar!=null&&ar>0){const p=r2(a/ar*100);parts.push(a+'A = '+p+'% of nameplate');cls.push(p>BANDS.ampsHigh[1]?'R':p>BANDS.ampsHigh[0]?'Y':p<BANDS.ampsLowYellow?'Y':'G')}
+   else parts.push(a+'A (no nameplate typed: not checked)')}
+  if(v!=null){
+   if(v<=0){parts.push(v+'V looks wrong');cls.push('R')}
+   else if(vr!=null&&vr>0){const p=r2(v/vr*100);parts.push(v+'V = '+p+'% of rated');cls.push(inband(p,BANDS.voltsPct))}
+   else parts.push(v+'V (no rated volts typed: not checked)')}
+  if(!parts.length){show(id,'','',name+': enter readings.');return}
+  let c=cls.includes('R')?'R':cls.includes('Y')?'Y':cls.length?'G':'';
+  if(c==='G'&&parts.some(p=>p.includes('not checked')))c='';
+  fin(id,name+': '+parts.join(' | '),c)}
+ elec('r_cel','Condenser',n('cv'),n('cvr'),n('ca'),n('rla'));
+ elec('r_ael','Air handler',n('av'),n('avr'),n('aa'),n('fla'));
+}
+document.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',calc));
+calc();
+$('copy').onclick=()=>{const head='DSC SYSTEM TEST - '+$('job').value+'\n'+[$('make').value,$('model').value,$('serial').value?'S/N '+$('serial').value:'',$('tons').value?$('tons').value+'T':'',$('ref').value,$('meter').value].filter(Boolean).join(' ');
+ const t=[head,...['r_sh','r_sc','r_air','r_sp','r_cfm','r_cel','r_ael'].map(k=>out[k]).filter(x=>x&&!/enter readings|enter tons/i.test(x))].join('\n');
+ const done=()=>{$('copy').textContent='Copied';setTimeout(()=>$('copy').textContent='Copy summary (paste into a note)',1500)};
+ (navigator.clipboard?navigator.clipboard.writeText(t).then(done):Promise.reject()).catch(()=>{prompt('Copy this:',t)})};
+$('clear').onclick=()=>{document.querySelectorAll('input').forEach(i=>i.value='');document.querySelectorAll('select').forEach(s=>s.selectedIndex=0);calc()};
+</script></body></html>
