@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Probe Scanner</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:16px;max-width:560px}
+button{font-size:20px;padding:14px 20px;border-radius:12px;border:0;background:#0a7;color:#fff;width:100%}
+.card{border:2px solid #ccc;border-radius:12px;padding:12px;margin-top:12px;word-break:break-all}
+.ok{border-color:#0a7}.bad{border-color:#d33}
+</style></head><body>
+<h1>Probe Scanner</h1>
+<p>Turn the probe ON, tap the button, pick it from the list. This only LOOKS at the probe. It saves and sends nothing.</p>
+<button id="go">Find a probe</button>
+<div id="out"></div>
+<script>
+const out=document.getElementById('out');
+function card(cls,html){const d=document.createElement('div');d.className='card '+cls;d.innerHTML=html;out.prepend(d);return d}
+document.getElementById('go').onclick=async()=>{
+  if(!navigator.bluetooth){card('bad','<b>RED:</b> This browser cannot use Bluetooth. Open this page in Bluefy.');return}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[
+      'battery_service','device_information','generic_access','environmental_sensing','health_thermometer']});
+    const c=card('ok','<b>GREEN:</b> picked <b>'+(dev.name||'(no name)')+'</b><br>Connecting...');
+    const srv=await dev.gatt.connect();
+    const list=await srv.getPrimaryServices();
+    let h='<b>GREEN:</b> connected to <b>'+(dev.name||'(no name)')+'</b><br>Services the probe showed:<ul>';
+    list.forEach(s=>h+='<li>'+s.uuid+'</li>');
+    h+='</ul>'+(list.length?'':'None shown. It may hide custom services; tell Claude.');
+    c.innerHTML=h;
+    dev.gatt.disconnect();
+  }catch(e){card('bad','<b>RED:</b> '+e.name+': '+e.message)}
+};
+</script></body></html>
