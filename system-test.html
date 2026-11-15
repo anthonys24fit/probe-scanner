@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://script.google.com https://script.googleusercontent.com">
 <title>DSC System Test</title>
 <style>
 :root{--g:#0a7;--y:#e90;--r:#d33;--b:#ddd}
-body{font-family:system-ui,sans-serif;margin:0 0 calc(190px + env(safe-area-inset-bottom));background:#f6f6f6}
+body{font-family:system-ui,sans-serif;margin:0 0 calc(280px + env(safe-area-inset-bottom));background:#f6f6f6}
 h1{font-size:20px;margin:0;padding:12px 16px;background:#124;color:#fff}
 .step{background:#fff;margin:10px;padding:12px;border-radius:12px}
 h2{font-size:17px;margin:0 0 8px}
@@ -16,9 +16,9 @@ input,select{font-size:18px;width:100%;box-sizing:border-box;padding:10px;border
 .small{font-size:12px;color:#555}
 button{font-size:18px;padding:14px;border:0;border-radius:12px;background:#124;color:#fff;width:100%;margin-top:8px}
 button.clr{background:#777}
-#bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ccc}
+#bar input{margin-top:0}#bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ccc}
 </style></head><body>
-<h1>DSC System Test <span class="small" style="color:#9cf">typed readings &middot; nothing is saved or sent</span></h1>
+<h1>DSC System Test <span class="small" style="color:#9cf">typed readings &middot; nothing leaves this phone until you tap Save</span></h1>
 
 <div class="step"><h2>1 of 6 &middot; System</h2>
 <label>Job / customer name<input id="job" autocomplete="off"></label>
@@ -58,10 +58,14 @@ button.clr{background:#777}
 <div class="res" id="r_cel">Condenser: enter readings.</div>
 <div class="res" id="r_ael">Air handler: enter readings.</div></div>
 
-<div id="bar"><button id="copy">Copy summary (paste into a note)</button><button class="clr" id="clear">New job (clear everything)</button></div>
+<div id="bar"><input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code" placeholder="Save PIN" style="margin-bottom:6px"><button id="save">Save to Sheet</button><div class="small" id="savemsg"></div><button id="copy">Copy summary (paste into a note)</button><button class="clr" id="clear">New job (clear everything)</button></div>
 <script>
 /* "Typical" bands: the owner can change these numbers in one place. They are NOT typed targets. */
 const BANDS={superheat:[3,6],subcool:[2,4],split:[[14,22],[12,24]],cfmPerTon:[[350,400],[300,450]],ampsHigh:[100,115],ampsLowYellow:50,voltsPct:[[90,110],[85,115]],staticYellow:1.2};
+/* Set after the Apps Script web app is deployed. Empty = Save is switched off. */
+const SAVE_URL='https://script.google.com/macros/s/AKfycbxCaF58upyaJFLHeyylj6KLYV7O5YqaXOucG7OTeWatCNcDeEhCJBzU6RFoCxp0MzVzEQ/exec';
+const uid=()=>{try{return crypto.randomUUID()}catch(_){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}};
+let TEST_ID=uid();
 const $=id=>document.getElementById(id);
 const r2=x=>Math.round(x*100)/100;
 const n=id=>{const v=$(id).value;if(v==='')return null;const x=parseFloat(v);return isFinite(x)?x:null};
@@ -104,5 +108,18 @@ $('copy').onclick=()=>{const head='DSC SYSTEM TEST - '+$('job').value+'\n'+[$('m
  const t=[head,...['r_sh','r_sc','r_air','r_sp','r_cfm','r_cel','r_ael'].map(k=>out[k]).filter(x=>x&&!/enter readings|enter tons/i.test(x))].join('\n');
  const done=()=>{$('copy').textContent='Copied';setTimeout(()=>$('copy').textContent='Copy summary (paste into a note)',1500)};
  (navigator.clipboard?navigator.clipboard.writeText(t).then(done):Promise.reject()).catch(()=>{prompt('Copy this:',t)})};
-$('clear').onclick=()=>{document.querySelectorAll('input').forEach(i=>i.value='');document.querySelectorAll('select').forEach(s=>s.selectedIndex=0);calc()};
+$('save').onclick=async()=>{
+ const m=$('savemsg');
+ if(!SAVE_URL){m.textContent='Save is not connected yet.';return}
+ if(!$('pin').value){m.textContent='Type the Save PIN first.';return}
+ const d={};document.querySelectorAll('input,select').forEach(i=>{if(i.id&&i.id!=='pin')d[i.id]=i.value});
+['sh','sc','air','sp','cfm','cel','ael'].forEach(k=>{d['res_'+k]=out['r_'+k]||''});
+ d.test_id=TEST_ID;$('save').disabled=true;m.textContent='Saving...';
+ try{
+  const r=await fetch(SAVE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({pin:$('pin').value,data:d})});
+  const j=await r.json();
+  if(j.ok&&!j.duplicate)TEST_ID=uid();m.textContent=j.ok&&j.duplicate?'Already saved earlier (row '+j.row+'). Edits since then were NOT saved. Tap New job to save as a new test.':j.ok?'Saved (row '+j.row+').':'NOT saved: '+(j.error||'unknown');
+ }catch(e){m.textContent='NOT confirmed. Check the Sheet before retyping.'}
+ $('save').disabled=false};
+$('clear').onclick=()=>{TEST_ID=uid();document.querySelectorAll('input').forEach(i=>i.value='');document.querySelectorAll('select').forEach(s=>s.selectedIndex=0);calc()};
 </script></body></html>
