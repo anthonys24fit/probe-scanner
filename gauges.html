@@ -102,7 +102,7 @@ body.ov{overflow:hidden}
 .arr{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:18px;font-weight:800;color:#fff;flex:0 0 34px}
 .arr.low{background:#1e5fd6}.arr.high{background:#d32f2f}.arr.ok{background:#2e9e4f}.arr.na{background:#9aa4af}.arr.blk{background:#111}.arr.cau{background:#e0a800;color:#111}
 .dsum{border-radius:12px;padding:12px;margin-bottom:8px;background:#eef1f4;border-left:8px solid #9aa4af}
-.dsum.black{border-left-color:#111;background:#e8e8e8}.dsum.caution,.dsum.yellow{border-left-color:#e0a800;background:#fff6d6}.dsum.red{border-left-color:#d32f2f;background:#fde7e7}.dsum.green{border-left-color:#2e9e4f;background:#e3f5e8}
+.dsum.black{border-left-color:#111;background:#e8e8e8}.dsum.caution,.dsum.yellow{border-left-color:#e0a800;background:#fff6d6}.dsum.red{border-left-color:#d32f2f;background:#fde7e7}.dsum.green{border-left-color:#2e9e4f;background:#e3f5e8}.dsum.partial{border-left-color:#6b7a90;background:#eaeef4}
 .dsum b{font-size:18px}
 .frow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
 .frow .ft{flex:1;min-width:0}.frow summary{min-height:32px;font-weight:600;font-size:14px}
@@ -202,6 +202,9 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <label for="meter">Metering device</label>
 <select id="meter"><option value="">(pick)</option><option value="TXV">TXV (thermostatic expansion valve)</option><option value="PISTON">Piston (fixed metering device)</option><option value="CAP">Capillary tube (fixed metering device)</option><option value="EXV">EXV (electronic TXV)</option><option value="AXV">AXV (automatic expansion valve)</option></select>
 <label for="tons">Nominal tons (nameplate)</label><input id="tons" inputmode="decimal" autocomplete="off">
+<label for="seer">Efficiency band (sets the condenser target)</label><select id="seer"><option value="30">5.7&ndash;8.6 SEER2 (older than 1991): 30&deg;F over outdoor</option><option value="25">9.6&ndash;11.5 SEER2 (1992 to 2005): 25&deg;F over outdoor</option><option value="20" selected>12.4&ndash;15.3 SEER2 (2006 to now): 20&deg;F over outdoor</option><option value="15">16.2+ SEER2 (high efficiency): 15&deg;F over outdoor</option></select>
+<label for="dcfm">Design airflow (CFM per ton)</label><select id="dcfm"><option value="350" selected>350: warm-humid climates (Gulf Coast, Florida)</option><option value="400">400: moist climates</option><option value="450">450: dry climates</option></select>
+<p class="mut">Both come from measureQuick&rsquo;s own pickers. The page uses them to calculate your targets automatically.</p>
 <label for="atm">Atmospheric pressure (psia)</label><input id="atm" inputmode="decimal" value="14.696" autocomplete="off">
 <p class="mut">14.696 psia is sea level. Gauges read psig, so the page adds this to get psia before looking up the saturation temperature.</p>
 </div>
@@ -213,8 +216,8 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <label for="reer">Rated EER (optional)</label><input id="reer" inputmode="decimal" autocomplete="off">
 </div>
 
-<div class="card"><b>Your targets</b>
-<p class="mut">Type a range from the maker's chart or nameplate, for example 1 to 30. The page does not guess targets. If you only know one number, type it in "from": the page then uses that number plus or minus 3&deg;F (superheat), 2&deg;F (subcooling and split) or 25 CFM per ton. The yellow margins are ours, not from MeasureQuick or HVAC School.</p>
+<div class="card"><b>Advanced targets (optional override)</b>
+<p class="mut">The page <b>calculates your targets automatically</b> from the system profile and the readings, the way measureQuick does (see &ldquo;Targets used now&rdquo; on the Gauges tab, first page). Leave these boxes empty to use the automatic targets. Type a range only if the equipment maker gives a different one: it then replaces the automatic target for that reading. If you type only one number (in &ldquo;from&rdquo;), the page uses it with a small margin: 3&deg;F for superheat, 2&deg;F for subcooling and split, 25 CFM per ton.</p>
 <label>Superheat range (&deg;F), from &ndash; to</label>
 <div class="pin"><div><input id="tsh1" inputmode="decimal" autocomplete="off" placeholder="from" aria-label="Superheat target from"></div><div><input id="tsh2" inputmode="decimal" autocomplete="off" placeholder="to" aria-label="Superheat target to"></div></div>
 <label>Subcooling range (&deg;F), from &ndash; to</label>
@@ -223,7 +226,7 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <div class="pin"><div><input id="tsp1" inputmode="decimal" autocomplete="off" placeholder="from" aria-label="Split target from"></div><div><input id="tsp2" inputmode="decimal" autocomplete="off" placeholder="to" aria-label="Split target to"></div></div>
 <label>CFM per ton range, from &ndash; to</label>
 <div class="pin"><div><input id="tpt1" inputmode="decimal" autocomplete="off" placeholder="from" aria-label="CFM per ton target from"></div><div><input id="tpt2" inputmode="decimal" autocomplete="off" placeholder="to" aria-label="CFM per ton target to"></div></div>
-<label for="tespmax">Max allowed static (in. WC)</label><input id="tespmax" inputmode="decimal" autocomplete="off" placeholder="from the nameplate">
+<label for="tespmax">Max allowed static (in. WC)</label><input id="tespmax" inputmode="decimal" autocomplete="off" placeholder="nameplate maximum (otherwise 0.7)">
 </div>
 
 <div class="card"><b>Your company (for the report)</b>
@@ -242,12 +245,12 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 </div>
 
 <div class="card"><b>Flags and black-flag limits</b>
-<p class="mut">A <b>black flag</b> means a reading that could lead to system or compressor failure if it is left unresolved (that is how measureQuick describes it). The page never picks these limits for you: type your own. A limit left empty keeps that black check switched off.</p>
-<label for="blkDL">Black if the discharge line is hotter than (&deg;F)</label><input id="blkDL" inputmode="decimal" autocomplete="off">
-<label for="blkCR">Black if the compression ratio is higher than</label><input id="blkCR" inputmode="decimal" autocomplete="off">
+<p class="mut">A <b>black flag</b> means a reading that could lead to system or compressor failure if it is left unresolved (that is how measureQuick describes it). The page uses automatic limits: a discharge line hotter than 225&deg;F, or a compression ratio of 11 to 1 or higher. Type your own below only to replace them. There is no automatic suction-line limit because no published number was found.</p>
+<label for="blkDL">Black if the discharge line is hotter than (&deg;F)</label><input id="blkDL" inputmode="decimal" autocomplete="off" placeholder="225 (automatic)">
+<label for="blkCR">Black if the compression ratio is at or above</label><input id="blkCR" inputmode="decimal" autocomplete="off" placeholder="11 (automatic)">
 <label for="blkSL">Black if the suction line is hotter than (&deg;F)</label><input id="blkSL" inputmode="decimal" autocomplete="off">
-<details><summary>Published reference points (not filled in for you)</summary>
-<p class="mut">These numbers come from web articles and maker notes for particular compressors, found on 2026-11-16. They are starting points to check against YOUR compressor's data, not limits.</p>
+<details><summary>Where the automatic limits come from</summary>
+<p class="mut">These numbers come from web articles and maker notes for particular compressors, found on 2026-11-16. The automatic limits are starting points, not your compressor&rsquo;s own data: if your compressor maker publishes a different limit, type it above.</p>
 <p class="mut">Discharge line: one trade article puts the limit at about 225&deg;F, measured about 3 inches from the compressor; a Copeland knowledge-base entry gives 240&deg;F as the maximum external discharge line temperature for one older scroll model; newer Copeland guides list model-specific discharge gas limits of about 248 to 284&deg;F (120 to 140&deg;C). Limits differ by compressor, so use the compressor maker's number. Compression ratio and suction line: no single published limit was found; check the compressor maker's application guide.</p>
 <p class="mut"><a href="https://www.achrnews.com/articles/152881-what-causes-high-compressor-discharge-temperatures" target="_blank" rel="noopener noreferrer">ACHR News: what causes high discharge temperatures</a><br><a href="https://copeland.custhelp.com/app/answers/detail/a_id/5028/~/discharge-line-thermostat-on-zf*kae-scroll-compressors" target="_blank" rel="noopener noreferrer">Copeland: discharge line thermostat note</a></p></details>
 <label for="blkReason">Mark black by hand: what is wrong? (leave empty for none)</label><input id="blkReason" autocomplete="off">
@@ -286,6 +289,7 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 </div>
 <h2 class="gh">Airside</h2>
 <div class="tiles">
+<div class="tile blue" data-for="oat"><span class="tn">OUTDOOR AIR</span><input id="oat" inputmode="decimal" autocomplete="off" aria-label="Outdoor air temperature"><span class="tu">&deg;F</span></div>
 <div class="tile red" data-for="rdb"><span class="tn">RETURN DB (RADB)</span><input id="rdb" inputmode="decimal" autocomplete="off" aria-label="Return dry bulb"><span class="tu">&deg;F</span></div>
 <div class="tile blue" data-for="sdb"><span class="tn">SUPPLY DB (SADB)</span><input id="sdb" inputmode="decimal" autocomplete="off" aria-label="Supply dry bulb"><span class="tu">&deg;F</span></div>
 <div class="tile red" data-for="rhv"><span class="tn" id="rhl">Return RH (%)</span><input id="rhv" inputmode="decimal" autocomplete="off" aria-label="Return humidity"><select id="rmode" aria-label="Return humidity as"><option value="rh">RH %</option><option value="wb">Wet bulb &deg;F</option></select></div>
@@ -321,6 +325,7 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 
 <section class="page" id="p0" data-name="Info"><h2>This job</h2>
 <div class="card"><p id="infoLines" class="mut">&nbsp;</p><p class="mut" id="nistNote"></p></div>
+<div class="card"><b>Targets used now</b><div id="tgtList"></div></div>
 <div class="card"><b>Refrigerant glide</b><p class="mut" id="glide">&nbsp;</p></div>
 </section>
 
@@ -443,15 +448,46 @@ function rng(a,b,m){const x=num(a),y=num(b);if(x===null&&y===null)return null;if
 function zonesFor(r,y,min,max){if(r===null)return[];const c=v=>Math.max(min,Math.min(max,v)),lo=c(r.lo),hi=c(r.hi),a=c(r.lo-y),d=c(r.hi+y);
   return[[min,a,'#3a7bd5'],[a,lo,'#f2b705'],[lo,hi,'#2e9e4f'],[hi,d,'#f2b705'],[d,max,'#d32f2f']]}
 function word(el,val,r,m){let w='NOT CHECKED',cls='';if(val!==null&&r!==null){if(val>=r.lo&&val<=r.hi){w='✓ IN RANGE';cls='OK'}else{const low=val<r.lo,d=low?r.lo-val:val-r.hi;w=(low?'▼ LOW':'▲ HIGH');cls=d<=m?'CHECK':'BAD'}}el.textContent=w;el.className='word '+cls}
+// ---- automatic targets (measureQuick-style: calculated from the profile and the conditions; typed ranges only override) ----
+const assumed=id=>{const e=$(id);return !!(e&&e.options[e.selectedIndex]&&e.options[e.selectedIndex].defaultSelected)};
+function autoT(k){
+  const ov={sh:['tsh1','tsh2',3],sc:['tsc1','tsc2',2],split:['tsp1','tsp2',2],cpt:['tpt1','tpt2',25]}[k];
+  if(ov){const r=rng($(ov[0]).value,$(ov[1]).value,ov[2]);if(r)return{rg:r,src:'typed',why:'typed by you (override)'}}
+  const m=$('meter').value,txv=m==='TXV'||m==='EXV'||m==='AXV',fixed=m==='PISTON'||m==='CAP';
+  const dc=num($('dcfm').value)||350;
+  if(k==='sh'){
+    if(txv)return{rg:{lo:5,hi:15,single:false},src:'auto',why:'TXV-type rule: 10°F plus or minus 5 (HVAC School)'};
+    if(fixed){
+      let R=null;try{R=psy(num($('rdb').value),$('rmode').value,num($('rhv').value),atm())}catch(e){R=null}
+      const oat=num($('oat').value);
+      if(!R||oat===null)return{rg:null,why:'a fixed metering device needs the return air temperature and humidity and the outdoor air temperature'};
+      const t=(3*R.wb-80-oat)/2;
+      if(oat<55||t<5)return{rg:null,why:'the fixed-orifice formula does not work below 55°F outdoors or when it gives under 5°F: use the unit’s own charging chart (or type a range)'};
+      return{rg:{lo:t-5,hi:t+5,single:false},src:'auto',why:'fixed-orifice field formula (3 x return wet bulb - 80 - outdoor temp) / 2 = '+r1(t)+'°F, plus or minus 5 (ours). The unit’s own chart governs'};
+    }
+    return{rg:null,why:'pick the metering device'};
+  }
+  if(k==='sc'){
+    if(txv)return{rg:{lo:8,hi:14,single:false},src:'auto',why:'TXV-type rule: 8 to 14°F (HVAC School). Use the nameplate target if it differs'};
+    if(fixed)return{rg:null,why:'not used for a fixed metering device (superheat is the charge check)'};
+    return{rg:null,why:'pick the metering device'};
+  }
+  if(k==='split'){const lo=0.6*12000/(1.08*dc),hi=0.8*12000/(1.08*dc);return{rg:{lo:lo,hi:hi,single:false},src:'auto',why:'sensible heat ratio 0.6 to 0.8 at '+dc+' CFM per ton (the same math as measureQuick’s sample report)'+(assumed('dcfm')?' [design airflow is the default pick: change it on the Home tab if different]':'')}}
+  if(k==='cpt'){const lo=Math.max(350,dc*0.9),hi=Math.min(525,dc*1.1);return{rg:{lo:lo,hi:hi,single:false},src:'auto',why:'design airflow '+dc+' plus or minus 10% (ours), kept between 350 and 525 CFM per ton (measureQuick text)'+(assumed('dcfm')?' [design airflow is the default pick: change it on the Home tab if different]':'')}}
+  if(k==='tesp'){const t=num($('tespmax').value);if(t!==null&&t>0)return{rg:{lo:-1,hi:t,single:false},src:'typed',why:'the nameplate maximum you typed'};return{rg:{lo:-1,hi:0.7,single:false},src:'auto',why:'common limit of 0.7 in. WC (HVAC School, measureQuick sample report) because no nameplate maximum was typed'}}
+  if(k==='ctoa'){const c=num($('seer').value)||20;return{rg:{lo:c-5,hi:c+5,single:false},src:'auto',why:'measureQuick’s band for the efficiency picked ('+c+'°F over outdoor), plus or minus 5 (ours)'+(assumed('seer')?' [efficiency band is the default pick: change it on the Home tab if different]':'')}}
+  return{rg:null,why:''};
+}
 function drawCore(){
   const ref=$('ref').value,pl=num($('pl').value),ph=num($('ph').value),A=atm();
   const lowSat=dial($('gLow'),ref,'dew','LOW',pl!==null&&pl+A>0?pl:null,'#1e88e5','#0d3b82');
   const highSat=dial($('gHigh'),ref,'bub','HIGH',ph!==null&&ph+A>0?ph:null,'#e53935','#7f1717');
   // glide note
   const d=PT[ref],i=80,gl=d.bub[i]-d.dew[i]; $('glide').innerHTML=Math.abs(gl)<1.5?'Almost no glide (dew and bubble are nearly the same).':'Blend with glide: at 40&deg;F the dew point is '+r1(d.dew[i]-A)+' psig and the bubble point is '+r1(d.bub[i]-A)+' psig. The page uses the <b>dew</b> point for superheat and the <b>bubble</b> point for subcooling.';
-  const ts=num($('ts').value),tl=num($('tl').value),rsh=rng($('tsh1').value,$('tsh2').value,3),rsc=rng($('tsc1').value,$('tsc2').value,2);
+  const ts=num($('ts').value),tl=num($('tl').value),rsh=autoT('sh').rg,rsc=autoT('sc').rg;
   const sh=lowSat!==null&&ts!==null?ts-lowSat:null,sc=highSat!==null&&tl!==null?highSat-tl:null;
-  window.__calc=Object.assign(window.__calc||{},{lowSat:lowSat,highSat:highSat,sh:sh,sc:sc});
+  const hb=ph!==null&&ph+A>0?satT(ref,'bub',ph+A):null,hd=ph!==null&&ph+A>0?satT(ref,'dew',ph+A):null,oatv=num($('oat').value);
+  window.__calc=Object.assign(window.__calc||{},{lowSat:lowSat,highSat:highSat,sh:sh,sc:sc,ctoa:(hb!==null&&hd!==null&&oatv!==null)?(hb+hd)/2-oatv:null});
   half($('dSuc'),ts,-20,100,[]);half($('dLiq'),tl,40,180,[]);
   half($('dSh'),sh,-10,50,zonesFor(rsh,3,-10,50));half($('dSc'),sc,-5,35,zonesFor(rsc,2,-5,35));
   word($('wSh'),sh,rsh,3);word($('wSc'),sc,rsc,2);
@@ -538,9 +574,9 @@ function draw2(){
   if(tesp!==null){out.push(cell('TOTAL EXTERNAL STATIC',fmt(tesp,2),'in. WC','wSt'))}
   if(R&&S&&split!==null&&split<=0)M.push('Supply air is not cooler than return air, so the cooling numbers are not meaningful.');
   $('airOut').innerHTML=out.join('');
-  if($('wSp'))word($('wSp'),split,rng($('tsp1').value,$('tsp2').value,2),2);
-  if($('wCpt'))word($('wCpt'),cpt,rng($('tpt1').value,$('tpt2').value,25),25);
-  if($('wSt')){const mx=tmax;word($('wSt'),tesp,mx!==null?{lo:-1,hi:mx,single:false}:null,0.1)}
+  if($('wSp'))word($('wSp'),split,autoT('split').rg,2);
+  if($('wCpt'))word($('wCpt'),cpt,autoT('cpt').rg,25);
+  if($('wSt'))word($('wSt'),tesp,autoT('tesp').rg,0.1);
   $('aMsg').textContent=M.join(' ');
   window.__tot=tot;window.__R=R;window.__calc=Object.assign(window.__calc||{},{split:split,tot:tot,cpt:cpt,tesp:tesp});
   draw3();
@@ -575,7 +611,7 @@ function drawCore3(){
   if($('wCa'))word($('wCa'),100*C.A/crla,{lo:-1,hi:100,single:false},15);if($('wHa'))word($('wHa'),100*H.A/hfla,{lo:-1,hi:100,single:false},15);
   $('eMsg').textContent=M.join(' ');
 }
-['rdb','sdb','rhv','shv','rmode','smode','cfm','tons','tesp','tespmax','tsp1','tsp2','tpt1','tpt2'].forEach(id=>$(id).addEventListener('input',draw2));
+['rdb','sdb','rhv','shv','rmode','smode','cfm','tons','tesp','tespmax','tsp1','tsp2','tpt1','tpt2','oat','dcfm','seer','meter','tsh1','tsh2','tsc1','tsc2'].forEach(id=>$(id).addEventListener('input',()=>{draw();draw2()}));
 ['cph','hph','rv','cv','ca','cpf','crla','hv','ha','hpf','hfla','reer'].forEach(id=>$(id).addEventListener('input',draw3));
 [['rmode','rhv','rhl','Return'],['smode','shv','shl','Supply']].forEach(([m,v,l,nm])=>$(m).addEventListener('change',()=>{const rh=$(m).value==='rh';$(l).textContent=nm+(rh?' RH (%)':' wet bulb (\u00B0F)');$(v).value='';draw2()}));
 $('ref').addEventListener('input',draw2);$('atm').addEventListener('input',draw2);
@@ -650,6 +686,10 @@ function drawInfo(){
     n=msgs.join(' ');
   }
   $('nistNote').textContent=n;
+  const tl=$('tgtList');tl.textContent='';
+  [['sh','Superheat','°F'],['sc','Subcooling','°F'],['ctoa','Condenser over outdoor air','°F'],['split','Temperature split','°F'],['cpt','Airflow per ton',' CFM'],['tesp','Static pressure',' in. WC']].forEach(x=>{
+    const t=autoT(x[0]);const q=E('p','mut');q.appendChild(E('b','',x[1]+': '));
+    q.appendChild(document.createTextNode(t.rg?(x[0]==='tesp'?'up to '+t.rg.hi:fmt(t.rg.lo,x[0]==='cpt'?0:1)+' to '+fmt(t.rg.hi,x[0]==='cpt'?0:1))+x[2]+' ('+t.why+')':'no target yet: '+t.why));tl.appendChild(q)});
   if(v==='nist')$('crmsg').textContent='Not used in non-invasive mode (no pressure readings).';
 }
 // results tiles on the Grid
@@ -658,6 +698,7 @@ function renderGridCalc(){
   const c=window.__calc||{},o=[];
   if(c.lowSat!=null)o.push(tileHTML('LOW SIDE SATURATION',fmt(c.lowSat,1),'°F (dew point)','blue'));
   if(c.highSat!=null)o.push(tileHTML('HIGH SIDE SATURATION',fmt(c.highSat,1),'°F (bubble point)','red'));
+  if(c.ctoa!=null)o.push(tileHTML('CONDENSER OVER OUTDOOR AIR',fmt(c.ctoa,1),'°F'));
   if(c.sh!=null)o.push(tileHTML('SUPERHEAT',fmt(c.sh,1),'°F'));
   if(c.sc!=null)o.push(tileHTML('SUBCOOLING',fmt(c.sc,1),'°F'));
   if(c.split!=null)o.push(tileHTML('TEMP SPLIT',fmt(c.split,1),'°F'));
@@ -706,36 +747,40 @@ $('btScan').onclick=async()=>{
 // ---- Diagnostics (flags) and tap-a-reading detail ----
 const E=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x};
 let trend={};
-const TREND_KEYS=['lowSat','highSat','sh','sc','split','tot','eer','cpt','tesp','cr','cAp','hAp','cVp','hVp'];
+const TREND_KEYS=['lowSat','highSat','ctoa','sh','sc','split','tot','eer','cpt','tesp','cr','cAp','hAp','cVp','hVp'];
 function pushTrend(k,v){if(v===null||v===undefined||!isFinite(v))return;const a=trend[k]||(trend[k]=[]);if(a.length&&a[a.length-1]===v)return;a.push(v);if(a.length>300)a.shift()}
 function snapTrend(){const c=window.__calc||{};TREND_KEYS.forEach(k=>pushTrend(k,c[k]));['td','ts','tl'].forEach(id=>pushTrend(id,num($(id).value)))}
 document.addEventListener('change',()=>{setTimeout(snapTrend,0)},true);
-const rangeOf=()=>({sh:rng($('tsh1').value,$('tsh2').value,3),sc:rng($('tsc1').value,$('tsc2').value,2),split:rng($('tsp1').value,$('tsp2').value,2),cpt:rng($('tpt1').value,$('tpt2').value,25)});
+const rangeOf=()=>({sh:autoT('sh').rg,sc:autoT('sc').rg,split:autoT('split').rg,cpt:autoT('cpt').rg,tesp:autoT('tesp').rg,ctoa:autoT('ctoa').rg});
 function cls3(val,r,m){
   if(val===null||val===undefined||!isFinite(val)||!r)return null;
   if(val>=r.lo&&val<=r.hi)return{pos:'in',level:'green'};
   const low=val<r.lo,d=low?r.lo-val:val-r.hi;return{pos:low?'low':'high',level:d<=m?'yellow':'red'}}
 function computeFlags(){
-  const c=window.__calc||{},R=rangeOf(),tmax=num($('tespmax').value),rows=[];
-  const defs=[['sh','Superheat','°F',c.sh,R.sh,3,1],['sc','Subcooling','°F',c.sc,R.sc,2,1],['split','Temperature split','°F',c.split,R.split,2,1],['cpt','Airflow per ton','CFM per ton',c.cpt,R.cpt,25,0],['tesp','Total static pressure','in. WC',c.tesp,tmax!==null?{lo:-1,hi:tmax}:null,0.1,2],['cA','Condenser amps','% of rated',c.cAp,{lo:-1,hi:100},15,0],['hA','Air handler amps','% of rated',c.hAp,{lo:-1,hi:100},15,0],['cV','Condenser volts','% of rated',c.cVp,{lo:90,hi:110},5,0],['hV','Air handler volts','% of rated',c.hVp,{lo:90,hi:110},5,0]].filter(d=>!/^(cA|hA|cV|hV)$/.test(d[0])||$('useElec').checked);
-  defs.forEach(([k,label,unit,val,rg,m,dg])=>{if(val===null||val===undefined||!isFinite(val))return;rows.push({k:k,label:label,unit:unit,val:val,dg:dg,rg:rg,e:cls3(val,rg,m)})});
+  const c=window.__calc||{},R=rangeOf(),rows=[];
+  const defs=[['sh','Superheat','°F',c.sh,R.sh,3,1],['sc','Subcooling','°F',c.sc,R.sc,2,1],['split','Temperature split','°F',c.split,R.split,2,1],['cpt','Airflow per ton','CFM per ton',c.cpt,R.cpt,25,0],['tesp','Total static pressure','in. WC',c.tesp,R.tesp,0.1,2],['ctoa','Condenser temperature over outdoor air','°F',c.ctoa,R.ctoa,3,1],['cA','Condenser amps','% of rated',c.cAp,{lo:-1,hi:100},15,0],['hA','Air handler amps','% of rated',c.hAp,{lo:-1,hi:100},15,0],['cV','Condenser volts','% of rated',c.cVp,{lo:90,hi:110},5,0],['hV','Air handler volts','% of rated',c.hVp,{lo:90,hi:110},5,0]].filter(d=>!/^(cA|hA|cV|hV)$/.test(d[0])||$('useElec').checked);
+  defs.forEach(([k,label,unit,val,rg,m,dg])=>{if(val===null||val===undefined||!isFinite(val))return;rows.push({k:k,label:label,unit:unit,val:val,dg:dg,rg:rg,e:cls3(val,rg,m),why:rg?'':(autoT(k).why||'')})});
   const lim=id=>{const v=num($(id).value);return v!==null&&v>0?v:null};
   const td=num($('td').value),ts=num($('ts').value),bl=[];
-  if(lim('blkDL')!==null&&td!==null&&td>lim('blkDL'))bl.push({label:'Discharge line temperature',text:'The discharge line is '+r1(td)+'°F, hotter than your black limit of '+r1(lim('blkDL'))+'°F. A compressor running this hot can fail if it is left alone.'});
-  if(lim('blkCR')!==null&&c.cr!=null&&c.cr>lim('blkCR'))bl.push({label:'Compression ratio',text:'The compression ratio is '+r1(c.cr)+' to 1, higher than your black limit of '+r1(lim('blkCR'))+' to 1. The compressor is working very hard and can overheat.'});
+  const dlv=lim('blkDL')!==null?lim('blkDL'):225,dlTxt=lim('blkDL')!==null?'your black limit of ':'the automatic limit of ';
+  const crv=lim('blkCR')!==null?lim('blkCR'):11,crTxt=lim('blkCR')!==null?'your black limit of ':'the automatic limit of ',crOk=c.lowSat!=null&&c.lowSat>=-20;
+  if(td!==null&&td>dlv)bl.push({auto:lim('blkDL')===null,label:'Discharge line temperature',text:'The discharge line is '+r1(td)+'°F, hotter than '+dlTxt+r1(dlv)+'°F. A compressor running this hot can fail if it is left alone.'+(lim('blkDL')===null?' (225°F is a general default from one published source; compressors differ, so type your compressor maker’s limit on the Home tab if it is different.)':'')});
+  if(c.cr!=null&&c.cr>=crv&&crOk)bl.push({auto:lim('blkCR')===null,label:'Compression ratio',text:'The compression ratio is '+r1(c.cr)+' to 1, at or above '+crTxt+r1(crv)+' to 1. The compressor is working very hard and can overheat.'});
   if(lim('blkSL')!==null&&ts!==null&&ts>lim('blkSL'))bl.push({label:'Suction line temperature',text:'The suction line is '+r1(ts)+'°F, hotter than your black limit of '+r1(lim('blkSL'))+'°F. Hot suction gas can overheat the compressor.'});
   const why=$('blkReason').value.trim();if(why)bl.push({label:'Marked black by the technician',text:why});
   const any=rows.length>0||td!==null||ts!==null||c.cr!=null;
   const yellow=rows.filter(r=>r.e&&r.e.level==='yellow').length,red=rows.filter(r=>r.e&&r.e.level==='red').length;
   const unsure=[];if(!$('cStable').checked)unsure.push('the system has not been confirmed as running 15+ minutes with steady readings');if(!$('cDry').checked)unsure.push('the condenser coil has not been confirmed as dry');
+  if(c.cr!=null&&c.cr>=crv&&!crOk)unsure.push('a pressure reading looks unrealistic (the compression ratio works out to '+r1(c.cr)+' to 1 with a near-vacuum low side): check the gauge hoses and the typed numbers');
   const caution=any&&unsure.length>0,agg=yellow>=3;
-  let top='na';if(bl.length)top='black';else if(caution)top='caution';else if(red||agg)top='red';else if(yellow)top='yellow';else if(rows.some(r=>r.e))top='green';
+  const charged=rows.some(r=>(r.k==='sh'||r.k==='sc')&&r.e);
+  let top='na';if(bl.length)top='black';else if(caution)top='caution';else if(red||agg)top='red';else if(yellow)top='yellow';else if(rows.some(r=>r.e))top=charged?'green':'partial';
   return{rows:rows,bl:bl,caution:caution,unsure:unsure,agg:agg,yellow:yellow,red:red,top:top}}
-const FLAGTXT={black:'BLACK FLAG',caution:'CAUTION',red:'RED FLAG',yellow:'YELLOW FLAG',green:'TARGETS MET',na:'NO FLAGS YET'};
-const FLAGICO={black:'⚑',caution:'⚠',red:'⚑',yellow:'⚑',green:'✔',na:'⚑'};
-const FLAGCOL={black:'#111',caution:'#e0a800',red:'#d32f2f',yellow:'#e0a800',green:'#2e9e4f',na:'#9aa4af'};
+const FLAGTXT={black:'BLACK FLAG',caution:'CAUTION',red:'RED FLAG',yellow:'YELLOW FLAG',green:'TARGETS MET',partial:'SOME CHECKS MISSING',na:'NO FLAGS YET'};
+const FLAGICO={black:'⚑',caution:'⚠',red:'⚑',yellow:'⚑',green:'✔',partial:'◐',na:'⚑'};
+const FLAGCOL={black:'#111',caution:'#e0a800',red:'#d32f2f',yellow:'#e0a800',green:'#2e9e4f',partial:'#6b7a90',na:'#9aa4af'};
 function updateFlagBtns(){const f=computeFlags();document.querySelectorAll('.flagbtn').forEach(b=>{b.querySelector('.fltxt').textContent=FLAGTXT[f.top];b.setAttribute('aria-label','Open diagnostics. Current flag: '+FLAGTXT[f.top]);const i=b.querySelector('.flico');i.textContent=FLAGICO[f.top];i.style.color=FLAGCOL[f.top];b.style.borderColor=FLAGCOL[f.top]})}
-const SUMTXT={black:'A reading is past a limit that could lead to system or compressor failure if it is left unresolved. Deal with it as soon as possible.',caution:'The system may not be steady yet, or the condenser may still be wet. Wait, then re-check before trusting the other flags.',red:'One or more readings are well outside your targets, or several small problems are showing at the same time.',yellow:'A reading is a little outside your target. Keep an eye on it: small problems can add up.',green:'Everything that was checked against your targets is inside them. (Black checks only run when you type limits on the Home tab.)',na:'Type your readings (Grid tab) and your targets (Home tab) to see flags here.'};
+const SUMTXT={black:'A reading is past a limit that could lead to system or compressor failure if it is left unresolved. Deal with it as soon as possible.',caution:'The system may not be steady yet, or the condenser may still be wet. Wait, then re-check before trusting the other flags.',red:'One or more readings are well outside your targets, or several small problems are showing at the same time.',yellow:'A reading is a little outside your target. Keep an eye on it: small problems can add up.',green:'Everything that was checked against the calculated targets is inside them.',partial:'What could be checked is inside its targets, but the refrigerant charge (superheat and subcooling) could not be checked yet. Pick the metering device on the Home tab and type the pressures and line temperatures.',na:'Type your readings (Grid tab) and pick the metering device and efficiency band (Home tab) to see flags here.'};
 // ---- overlay
 let lastFocus=null;
 function openOverlay(title,build){lastFocus=document.activeElement;$('ovTitle').textContent=title;const b=$('ovBody');b.textContent='';build(b);$('overlay').hidden=false;document.body.classList.add('ov');$('ovBody').scrollTop=0;$('ovClose').focus()}
@@ -757,12 +802,13 @@ const DET={
  cr:{name:'Compression ratio',what:'High-side pressure divided by low-side pressure (both absolute). A higher ratio means the compressor works harder and runs hotter.',high:'Possible causes: low suction pressure (low charge, a restriction, low airflow) or high head pressure (dirty condenser, overcharge, air in the system). Left alone it can overheat the compressor.'},
  cA:{name:'Amps compared with the nameplate',what:'The running current compared with the rated current on the nameplate. Running a little above the nameplate is not always a fault.',high:'Possible causes: low or unbalanced voltage, a dirty condenser, overcharge, or a failing motor or compressor. High current heats the windings.',low:'Possible causes: low refrigerant charge or a light load. Very low current can also point to a weak compressor.'},
  cV:{name:'Volts compared with the nameplate',what:'The measured voltage compared with the rated voltage.',high:'Possible causes: the utility supply or the transformer tap.',low:'Possible causes: the utility supply, loose connections, or undersized wiring. Low voltage makes motors draw more current.'},
+ ctoa:{name:'Condenser temperature over outdoor air',what:'How much hotter the condenser is working (its average condensing temperature) than the outdoor air. It shows how well the outdoor unit is shedding heat.',high:'Possible causes: a dirty condenser coil, poor airflow through it, a failing fan, or too much refrigerant.',low:'Possible causes: low refrigerant charge or a very light load.'},
  ts:{name:'Suction line temperature',what:'The temperature of the suction line, measured near the condenser. With the low-side saturation temperature it gives superheat.'},
  tl:{name:'Liquid line temperature',what:'The temperature of the liquid line, measured near the condenser. With the high-side saturation temperature it gives subcooling.'},
- td:{name:'Discharge line temperature',what:'The temperature of the hot gas leaving the compressor. It shows how hard the compressor is working.',high:'A hot discharge line points to a compressor running hot: a high compression ratio, low refrigerant return, or a dirty condenser. Your black limit on the Home tab decides when it turns black.'}};
+ td:{name:'Discharge line temperature',what:'The temperature of the hot gas leaving the compressor. It shows how hard the compressor is working.',high:'A hot discharge line points to a compressor running hot: a high compression ratio, low refrigerant return, or a dirty condenser. The page turns it black above 225°F, a general default from one published source; compressors differ, so type your compressor maker’s limit on the Home tab if it is different.'}};
 const DETALIAS={hA:'cA',hV:'cV'};
-const NAME2KEY={'SUPERHEAT':'sh','SUBCOOLING':'sc','TEMP SPLIT':'split','AIRFLOW PER TON':'cpt','TOTAL EXTERNAL STATIC':'tesp','TOTAL CAPACITY':'cap','EER (FIELD ESTIMATE)':'eer','EER (ESTIMATE)':'eer','LOW SIDE SATURATION':'lowsat','HIGH SIDE SATURATION':'highsat','CONDENSER AMPS':'cA','AIR HANDLER AMPS':'hA','CONDENSER VOLTS':'cV','AIR HANDLER VOLTS':'hV','SUCTION LINE':'ts','LIQUID LINE':'tl'};
-const KEY2TREND={sh:'sh',sc:'sc',split:'split',cpt:'cpt',tesp:'tesp',cap:'tot',eer:'eer',lowsat:'lowSat',highsat:'highSat',cr:'cr',cA:'cAp',hA:'hAp',cV:'cVp',hV:'hVp',ts:'ts',tl:'tl',td:'td'};
+const NAME2KEY={'SUPERHEAT':'sh','SUBCOOLING':'sc','TEMP SPLIT':'split','AIRFLOW PER TON':'cpt','TOTAL EXTERNAL STATIC':'tesp','TOTAL CAPACITY':'cap','EER (FIELD ESTIMATE)':'eer','EER (ESTIMATE)':'eer','LOW SIDE SATURATION':'lowsat','CONDENSER OVER OUTDOOR AIR':'ctoa','HIGH SIDE SATURATION':'highsat','CONDENSER AMPS':'cA','AIR HANDLER AMPS':'hA','CONDENSER VOLTS':'cV','AIR HANDLER VOLTS':'hV','SUCTION LINE':'ts','LIQUID LINE':'tl'};
+const KEY2TREND={sh:'sh',sc:'sc',split:'split',cpt:'cpt',tesp:'tesp',cap:'tot',eer:'eer',lowsat:'lowSat',ctoa:'ctoa',highsat:'highSat',cr:'cr',cA:'cAp',hA:'hAp',cV:'cVp',hV:'hVp',ts:'ts',tl:'tl',td:'td'};
 function rangeText(k,rg){if(!rg)return null;if(k==='tesp')return'up to '+rg.hi+' in. WC';if(k==='cA'||k==='hA')return'up to 100% of rated (the page\u2019s own default)';if(k==='cV'||k==='hV')return'90 to 110% of rated (the page\u2019s own default)';return fmt(rg.lo,k==='cpt'?0:1)+' to '+fmt(rg.hi,k==='cpt'?0:1)+(k==='cpt'?' CFM per ton':'°F')}
 function verdictEl(pos){const w=E('div','verd '+pos);w.appendChild(E('span','arr '+(pos==='in'?'ok':pos),pos==='in'?'✓':pos==='low'?'▼':'▲'));w.appendChild(E('b','',pos==='in'?'Just right':pos==='low'?'Too low':'Too high'));return w}
 function sparkline(arr){
@@ -772,10 +818,10 @@ function sparkline(arr){
   const p=document.createElementNS('http://www.w3.org/2000/svg','polyline');p.setAttribute('points',pts.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' '));p.setAttribute('fill','none');p.setAttribute('stroke','#2558fd');p.setAttribute('stroke-width','2.5');svg.appendChild(p);return svg}
 function curVal(key){
   const c=window.__calc||{};
-  const m={sh:[c.sh,'°F',1],sc:[c.sc,'°F',1],split:[c.split,'°F',1],cpt:[c.cpt,'CFM per ton',0],tesp:[c.tesp,'in. WC',2],cap:[c.tot,'BTU/h',0],eer:[c.eer,'BTU/h per watt',1],lowsat:[c.lowSat,'°F (dew point)',1],highsat:[c.highSat,'°F (bubble point)',1],cr:[c.cr,'to 1',1],cA:[c.cAp,'% of rated',0],hA:[c.hAp,'% of rated',0],cV:[c.cVp,'% of rated',0],hV:[c.hVp,'% of rated',0],ts:[num($('ts').value),'°F',1],tl:[num($('tl').value),'°F',1],td:[num($('td').value),'°F',1]};
+  const m={sh:[c.sh,'°F',1],sc:[c.sc,'°F',1],split:[c.split,'°F',1],cpt:[c.cpt,'CFM per ton',0],tesp:[c.tesp,'in. WC',2],cap:[c.tot,'BTU/h',0],eer:[c.eer,'BTU/h per watt',1],lowsat:[c.lowSat,'°F (dew point)',1],ctoa:[c.ctoa,'°F over outdoor air',1],highsat:[c.highSat,'°F (bubble point)',1],cr:[c.cr,'to 1',1],cA:[c.cAp,'% of rated',0],hA:[c.hAp,'% of rated',0],cV:[c.cVp,'% of rated',0],hV:[c.hVp,'% of rated',0],ts:[num($('ts').value),'°F',1],tl:[num($('tl').value),'°F',1],td:[num($('td').value),'°F',1]};
   return m[key]||[null,'',1]}
 function targetFor(key){
-  const R=rangeOf(),tmax=num($('tespmax').value),m={sh:[R.sh,3],sc:[R.sc,2],split:[R.split,2],cpt:[R.cpt,25],tesp:[tmax!==null?{lo:-1,hi:tmax}:null,0.1],cA:[{lo:-1,hi:100},15],hA:[{lo:-1,hi:100},15],cV:[{lo:90,hi:110},5],hV:[{lo:90,hi:110},5]};
+  const R=rangeOf(),m={sh:[R.sh,3],sc:[R.sc,2],split:[R.split,2],cpt:[R.cpt,25],tesp:[R.tesp,0.1],ctoa:[R.ctoa,3],cA:[{lo:-1,hi:100},15],hA:[{lo:-1,hi:100},15],cV:[{lo:90,hi:110},5],hV:[{lo:90,hi:110},5]};
   return m[key]||[null,0]}
 function openDetail(key){
   const d=DET[DETALIAS[key]||key];if(!d)return;
@@ -785,7 +831,7 @@ function openDetail(key){
     const rt=rangeText(key,tg[0]);
     if(rt&&(val===null||val===undefined||!isFinite(val))&&['cA','hA','cV','hV'].indexOf(key)>=0)b.appendChild(E('p','mut','Type the nameplate rating on the Home tab to compare this reading.'));
     else if(rt){b.appendChild(E('p','mut','Your target: '+rt));const e=cls3(val,tg[0],tg[1]);if(e)b.appendChild(verdictEl(e.pos))}
-    else if(['sh','sc','split','cpt','tesp'].indexOf(key)>=0)b.appendChild(E('p','mut','No target typed. Add one on the Home tab to check this reading.'));
+    else if(['sh','sc','split','cpt','tesp','ctoa'].indexOf(key)>=0)b.appendChild(E('p','mut','No target yet: '+(autoT(key).why||'add the missing profile information on the Home tab')+'.'));
     b.appendChild(E('h3','','What it is'));b.appendChild(E('p','',d.what));
     if(d.low){b.appendChild(E('h3','','If it is too low'));b.appendChild(E('p','',d.low))}
     if(d.high){b.appendChild(E('h3','','If it is too high'));b.appendChild(E('p','',d.high))}
@@ -808,7 +854,7 @@ function frowEl(r){
   const pos=r.e?r.e.pos:'na';w.appendChild(E('span','arr '+(pos==='in'?'ok':pos),pos==='in'?'✓':pos==='low'?'▼':pos==='high'?'▲':'–'));
   const t=E('div','ft');t.appendChild(E('b','',r.label+': '+fmt(r.val,r.dg)+' '+r.unit));
   const rt=rangeText(r.k,r.rg);
-  t.appendChild(E('div','mut',!r.e?'No target typed. Add one on the Home tab to check this.':pos==='in'?'Just right (target '+rt+').':(pos==='low'?'Too low':'Too high')+'. Your target is '+rt+'.'));
+  t.appendChild(E('div','mut',!r.e?'No target yet: '+(r.why||'add the missing profile information on the Home tab')+'.':pos==='in'?'Just right (target '+rt+').':(pos==='low'?'Too low':'Too high')+'. Your target is '+rt+'.'));
   const d=DET[DETALIAS[r.k]||r.k];const cause=d&&r.e&&r.e.pos!=='in'?d[r.e.pos]:null;
   if(cause){const dt=E('details');dt.appendChild(E('summary','','Possible causes'));dt.appendChild(E('p','mut',cause));t.appendChild(dt)}
   w.appendChild(t);return w}
@@ -825,23 +871,26 @@ function openDiag(){
     if(reds.length||f.agg){b.appendChild(E('h3','','Red flags: major'));if(f.agg&&!reds.length){const w=E('div','frow red');w.appendChild(E('span','arr high','⚑'));const t=E('div','ft');t.appendChild(E('b','','Several small problems at once'));t.appendChild(E('div','mut',f.yellow+' yellow flags together can point to a bigger problem. (Our rule: 3 or more.)'));w.appendChild(t);b.appendChild(w)}reds.forEach(r=>b.appendChild(frowEl(r)))}
     if(yel.length){b.appendChild(E('h3','','Yellow flags: minor'));yel.forEach(r=>b.appendChild(frowEl(r)))}
     if(grn.length){b.appendChild(E('h3','','Green: just right'));grn.forEach(r=>b.appendChild(frowEl(r)))}
-    if(nat.length){b.appendChild(E('h3','','No target typed'));nat.forEach(r=>b.appendChild(frowEl(r)))}
+    if(nat.length){b.appendChild(E('h3','','No target yet'));nat.forEach(r=>b.appendChild(frowEl(r)))}
     b.appendChild(E('h3','','What the flags mean'));
     [['Black flag','A reading that could lead to system or compressor failure if left unresolved. Act as soon as possible.'],['Caution','The system may not be steady, or the condenser may still be wet. Re-check.'],['Red flag','A reading far outside your target, or several small problems at once.'],['Yellow flag','A reading a little outside your target.'],['Green check','Inside your targets.']].forEach(x=>{const p=E('p','mut');p.appendChild(E('b','',x[0]+': '));p.appendChild(document.createTextNode(x[1]));b.appendChild(p)});
     b.appendChild(E('p','mut small','Flags are warning signs, not proof. The technician decides what is wrong and what to fix. This follows how measureQuick describes its own flags. The yellow and red cut-offs and the 3-yellow rule are ours, not measureQuick’s or HVAC School’s.'));
   })}
-['blkDL','blkCR','blkSL','blkReason','cStable','cDry','tsh1','tsh2','tsc1','tsc2','tsp1','tsp2','tpt1','tpt2','tespmax','td'].forEach(id=>$(id).addEventListener('input',()=>{updateFlagBtns()}));
+['meter','seer','dcfm'].forEach(id=>$(id).addEventListener('change',()=>{draw();draw2();updateFlagBtns()}));
+['blkDL','blkCR','blkSL','blkReason','cStable','cDry','tsh1','tsh2','tsc1','tsc2','tsp1','tsp2','tpt1','tpt2','tespmax','td','oat','seer','dcfm','meter'].forEach(id=>$(id).addEventListener('input',()=>{updateFlagBtns()}));
 ['cStable','cDry','useElec'].forEach(id=>$(id).addEventListener('change',updateFlagBtns));
 // ---- Customer report ----
 let aerial=null;
 const rMsg=t=>{$('rptMsg').textContent=t||''};
-const FLAGCOLR={black:'#111',caution:'#e0a800',red:'#d32f2f',yellow:'#e0a800',green:'#2e9e4f',na:'#9aa4af'};
+const rAdd=t=>{const c=$('rptMsg').textContent;$('rptMsg').textContent=(c?c+' ':'')+t};
+const FLAGCOLR={black:'#111',caution:'#e0a800',red:'#d32f2f',yellow:'#e0a800',green:'#2e9e4f',partial:'#6b7a90',na:'#9aa4af'};
 const VERDICT={
- black:['Urgent attention recommended','One or more readings reached a level your technician set as urgent. If it is not addressed, the system could be damaged. We recommend having it looked at as soon as possible.'],
+ black:['Urgent attention recommended','One or more readings reached a level that is urgent for this type of system. If it is not addressed, the system could be damaged. We recommend having it looked at as soon as possible.'],
  caution:['Preliminary results','These readings were taken before we confirmed the system was running steadily (or the outdoor coil was dry), so please treat them as a preview. We may need to re-check.'],
  red:['Repair recommended','One or more readings are well outside the targets set for your system, or several small items are showing at the same time.'],
  yellow:['Worth fixing soon','A reading is a little outside the target set for your system. Small items can add up, so it is worth looking at.'],
  green:['Readings look good','Everything we compared with a target is inside the target set for your system.'],
+ partial:['Partly checked','Some checks could not be made, including the refrigerant charge, so this report is incomplete.'],
  na:['Not enough readings','There were not enough readings with targets to give a verdict.']};
 const CUSTDEF={
  charge:['Refrigerant charge (superheat and subcooling)','The refrigerant is the coolant that carries heat out of your home. Too little or too much makes your system work harder, cost more to run, and wear out sooner.'],
@@ -855,11 +904,12 @@ const CUSTSAY={
  split:{low:'The air is not being cooled as much as it should be.',high:'Not enough air is moving across the cooling coil.'},
  cpt:{low:'Not enough air is moving. That lowers comfort and can freeze the coil.',high:'Air is moving faster than needed, which can leave the home feeling damp.'},
  tesp:{high:'Your air filter or ducts may be restricting airflow, so the fan has to work harder.'},
+ ctoa:{high:'The outdoor unit may not be shedding heat well (a dirty coil or poor airflow), which wastes electricity.',low:'The outdoor unit is running cooler than expected.'},
  cA:{high:'A motor may be using more electricity than it was designed for, which can shorten its life.'},
  hA:{high:'A motor may be using more electricity than it was designed for, which can shorten its life.'},
  cV:{low:'The power supply is lower than normal.',high:'The power supply is higher than normal.'},
  hV:{low:'The power supply is lower than normal.',high:'The power supply is higher than normal.'}};
-const GROUPOF={sh:'charge',sc:'charge',split:'split',cpt:'air',tesp:'air',cA:'elec',hA:'elec',cV:'elec',hV:'elec'};
+const GROUPOF={sh:'charge',sc:'charge',ctoa:'split',split:'split',cpt:'air',tesp:'air',cA:'elec',hA:'elec',cV:'elec',hV:'elec'};
 function rEl(parent,tag,cls,txt){const x=E(tag,cls,txt);parent.appendChild(x);return x}
 function rHeader(p,sub){
   const h=rEl(p,'div','rhead');
@@ -881,20 +931,21 @@ function buildReport(){
   rMsg('');
   const R=$('rpt');R.textContent='';
   const f=computeFlags(),c=window.__calc||{};
+  if(f.bl.some(x=>x.auto))rAdd('An urgent item on this report comes from the page\u2019s automatic limit (discharge line 225\u00B0F or compression ratio 11 to 1). Confirm it with your compressor\u2019s data before giving this report to the customer.');
   const dateTxt=(()=>{const v=$('jobDate').value;if(!v)return'';const d=new Date(v+'T12:00:00');return isNaN(d)?v:d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})})();
   // ===== page 1
   const p1=rEl(R,'section','rpage');rHeader(p1,'Your Air Conditioning System Health Report');
   const info=rEl(p1,'div','rinfo');
   [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
   if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo near where the technician was standing';img.src=aerial.url;img.onerror=()=>{rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));ph.appendChild(E('div','rsmall','Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m). Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
-  const v=VERDICT[f.top],vb=rEl(p1,'div','rverdict');vb.style.borderColor=FLAGCOLR[f.top];vb.style.background=f.top==='black'?'#ececec':f.top==='red'?'#fde7e7':f.top==='green'?'#e3f5e8':f.top==='na'?'#eef1f4':'#fff6d6';
+  const v=VERDICT[f.top],vb=rEl(p1,'div','rverdict');vb.style.borderColor=FLAGCOLR[f.top];vb.style.background=f.top==='black'?'#ececec':f.top==='red'?'#fde7e7':f.top==='green'?'#e3f5e8':(f.top==='na'||f.top==='partial')?'#eef1f4':'#fff6d6';
   const vi=rEl(vb,'span','rvico',FLAGICO[f.top]);vi.style.color=FLAGCOLR[f.top];
   const vt=rEl(vb,'div','rvtxt');vt.appendChild(E('b','',v[0]));vt.appendChild(E('div','',v[1]));
   const tool=$('toolName').value.trim(),cal=$('toolCalDate').value.trim(),cert=$('toolCert').value.trim(),ser=$('toolSerial').value.trim();
-  if(tool&&cal&&cert){const cd=new Date(cal+'T12:00:00');if(!isNaN(cd)&&cd>new Date(Date.now()+86400000)){rMsg('The calibration date is in the future, so the calibration line was left off. Fix it on the Home tab.')}else{const ct=rEl(p1,'div','rcal');ct.appendChild(E('b','','Calibrated measuring tool: '));ct.appendChild(document.createTextNode(tool+(ser?', serial '+ser:'')+'. Last calibrated '+(isNaN(cd)?cal:cd.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}))+', by / certificate: '+cert+'.'))}}
+  if(tool&&cal&&cert){const cd=new Date(cal+'T12:00:00');if(!isNaN(cd)&&cd>new Date(Date.now()+86400000)){rAdd('The calibration date is in the future, so the calibration line was left off. Fix it on the Home tab.')}else{const ct=rEl(p1,'div','rcal');ct.appendChild(E('b','','Calibrated measuring tool: '));ct.appendChild(document.createTextNode(tool+(ser?', serial '+ser:'')+'. Last calibrated '+(isNaN(cd)?cal:cd.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}))+', by / certificate: '+cert+'.'))}}
   // ===== page 2
   const p2=rEl(R,'section','rpage');rHeader(p2,'Your System’s Vitals');
-  p2.appendChild(E('p','rsmall','Each bar shows the target range (green) your technician set for your system. The marker shows where your system measured. The arrows show whether a reading is too low, too high, or just right.'));
+  p2.appendChild(E('p','rsmall','Each bar shows the target range (green) used for your system. The marker shows where your system measured. The arrows show whether a reading is too low, too high, or just right.'));
   const groups=['charge','split','air','elec'],shown={};
   groups.forEach(g=>{
     const rows=f.rows.filter(r=>r.e&&GROUPOF[r.k]===g);if(!rows.length)return;
@@ -905,7 +956,7 @@ function buildReport(){
       const ar=rEl(top,'span','rar '+(r.e.pos==='in'?'ok':r.e.pos));ar.appendChild(E('span','arr '+(r.e.pos==='in'?'ok':r.e.pos),r.e.pos==='in'?'✓':r.e.pos==='low'?'▼':'▲'));ar.appendChild(E('b','',r.e.pos==='in'?' Just right':r.e.pos==='low'?' Too low':' Too high'));
       card.appendChild(barEl(r));
       const lab=rEl(card,'div','rlabs');['Low','Normal','High'].forEach(x=>lab.appendChild(E('span','',x)));
-      card.appendChild(E('div','rsmall',(/^(cA|hA|cV|hV)$/.test(r.k)?'Limit we used: '+({cA:'up to 100% of the nameplate rating',hA:'up to 100% of the nameplate rating',cV:'90 to 110% of the nameplate rating',hV:'90 to 110% of the nameplate rating'})[r.k]:'Target set by your technician: '+rangeText(r.k,r.rg))+'.'));
+      card.appendChild(E('div','rsmall',(/^(cA|hA|cV|hV)$/.test(r.k)?'Limit we used: '+({cA:'up to 100% of the nameplate rating',hA:'up to 100% of the nameplate rating',cV:'90 to 110% of the nameplate rating',hV:'90 to 110% of the nameplate rating'})[r.k]:'Target range used: '+rangeText(r.k,r.rg))+'.'));
       if(r.e.pos!=='in'){const s=(CUSTSAY[r.k]||{})[r.e.pos];if(s)card.appendChild(E('div','rsay',s))}
     })});
   if(!f.rows.some(r=>r.e))p2.appendChild(E('p','','No targets were set for this visit, so the vitals could not be compared with a normal range. The measurements are listed below.'));
@@ -919,7 +970,7 @@ function buildReport(){
   if(meas.length){const mb=rEl(p2,'div','rgroup');mb.appendChild(E('h2','rh2','Other measurements'));const tb=rEl(mb,'div','rtable');meas.forEach(([k,vv])=>{const r=rEl(tb,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',vv))})}
   // ===== page 3
   const p3=rEl(R,'section','rpage');rHeader(p3,'What We Found and What It Means');
-  if(f.bl.length){p3.appendChild(E('h2','rh2 blkh','Urgent'));f.bl.forEach(x=>{const w=rEl(p3,'div','rfind black');w.appendChild(E('span','arr blk','⚑'));const t=rEl(w,'div','ft');t.appendChild(E('b','',x.label));t.appendChild(E('div','',x.label==='Marked black by the technician'?x.text:'This reading reached the urgent level your technician set. If it is not addressed, it could lead to a failed compressor, which is a costly repair.'))})}
+  if(f.bl.length){p3.appendChild(E('h2','rh2 blkh','Urgent'));f.bl.forEach(x=>{const w=rEl(p3,'div','rfind black');w.appendChild(E('span','arr blk','⚑'));const t=rEl(w,'div','ft');t.appendChild(E('b','',x.label));t.appendChild(E('div','',x.label==='Marked black by the technician'?x.text:'This reading reached an urgent level. If it is not addressed, it could lead to a failed compressor, which is a costly repair.'))})}
   if(f.caution){p3.appendChild(E('h2','rh2','Please note'));const w=rEl(p3,'div','rfind caution');w.appendChild(E('span','arr cau','⚠'));w.appendChild(E('div','ft','Some conditions were not confirmed yet: '+f.unsure.join(' and ')+'. Flags can change once they are.'))}
   const bad=f.rows.filter(r=>r.e&&r.e.level!=='green');
   if(bad.length||f.agg){p3.appendChild(E('h2','rh2','Items to address'));bad.forEach(r=>{const w=rEl(p3,'div','rfind '+r.e.level);w.appendChild(E('span','arr '+r.e.pos,r.e.pos==='low'?'▼':'▲'));const t=rEl(w,'div','ft');t.appendChild(E('b','',r.label+(r.e.pos==='low'?' is too low':' is too high')));const s=(CUSTSAY[r.k]||{})[r.e.pos];if(s)t.appendChild(E('div','',s))});if(f.agg)p3.appendChild(E('p','rsmall','Several small items showing together can point to a bigger problem.'))}
@@ -930,7 +981,7 @@ function buildReport(){
   p3.appendChild(E('h2','rh2','How to read the flags'));
   [['Black flag','A reading that could lead to system or compressor failure if it is left unresolved. Act as soon as possible.'],['Caution','The system may not have been steady yet, or the outdoor coil may still have been wet. We may need to re-check.'],['Red flag','A reading well outside the target range, or several small problems at the same time.'],['Yellow flag','A reading a little outside the target range.'],['Green check','Inside the target range set for your system.']].forEach(x=>{const p=rEl(p3,'p','rsmall');p.appendChild(E('b','',x[0]+': '));p.appendChild(document.createTextNode(x[1]))});
   p3.appendChild(E('h2','rh2','About this report'));
-  p3.appendChild(E('p','rsmall','The target ranges are the ones your technician set for your system. Capacity and efficiency numbers are field estimates and are only as accurate as the airflow, humidity and electrical readings behind them. Flags are warning signs, not proof of a fault: your technician uses them with training and judgment to decide what to repair. This report was prepared by your service technician.'));
+  p3.appendChild(E('p','rsmall','The target ranges come from your system\u2019s profile (type of metering device, efficiency band, design airflow, and the nameplate static limit when known) and the conditions during the visit, using published field rules. Some values are standard defaults, and the margins around them are our own: they are not the equipment maker\u2019s figures. Capacity and efficiency numbers are field estimates and are only as accurate as the airflow, humidity and electrical readings behind them. Flags are warning signs, not proof of a fault: your technician uses them with training and judgment to decide what to repair. This report was prepared by your service technician.'));
   const ft=rEl(p3,'div','rfoot');ft.appendChild(E('b','',$('coName').value.trim()||'Dade Super Cool Air Conditioning'));const fl=[$('coPhone').value.trim(),$('coEmail').value.trim(),$('coWeb').value.trim(),$('coLic').value.trim()?'License '+$('coLic').value.trim():''].filter(Boolean).join('  ·  ');if(fl)ft.appendChild(E('div','',fl));
 }
 $('reportBtn').onclick=()=>{buildReport();$('reportView').hidden=false;document.body.classList.add('rv');$('reportView').scrollTop=0};
