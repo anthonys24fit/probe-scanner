@@ -384,9 +384,11 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <div id="myPrefixes" class="mut"></div>
 </details>
 <button type="button" class="btn" id="btScan">Scan for a tool</button>
+<button type="button" class="btn" id="btId">Identify a device (is this my probe?)</button>
+<p class="mut">Hold your probe right next to the phone, turn it on, tap this, then pick a device with no name. The page listens for 12 seconds and tells you if it is a Fieldpiece probe. If not, tap again and pick another.</p>
 <button type="button" class="btn ghost" id="btCheck">Check what this browser can do</button>
 <div id="btCheckOut" class="mut"></div>
-<div id="btOut"></div>
+<div id="btOut" role="status" aria-live="polite"></div>
 </div>
 <div class="card"><b>My tools</b><div id="myTools" class="mut">No tools saved yet.</div></div>
 <div class="card"><b>Getting started</b>
@@ -786,7 +788,38 @@ $('btScan').onclick=async()=>{
       yes.onclick=()=>{yes.disabled=true;if(nm.indexOf('(no name')!==0)addPrefix(prefixFromName(nm));w.className='bt';w.textContent='Connecting to '+nm+'...';btConnect(dev,nm,say)};
       w.appendChild(document.createElement('br'));w.appendChild(yes);return}
     await btConnect(dev,nm,say);
-  }catch(e){if(e&&e.name==='NotFoundError'){say('',$('btMode').value==='mine'?'No tool picked (or none of your brands was found). If your tool did not show up, switch Show to All Bluetooth devices, pick it once, and tap Find this tool by name next time.':'No tool picked.')}else{say('bad','Could not scan: '+(e&&e.message?e.message:String(e))+' Try Show: All Bluetooth devices, then scan again.')}}
+  }catch(e){if(e&&(e.name==='NotFoundError'||/^\d+$/.test(String(e.message||'')))){say('',$('btMode').value==='mine'?'No tool picked (or none of your brands was found). If your tool did not show up, switch Show to All Bluetooth devices, pick it once, and tap Find this tool by name next time.':'No tool picked.')}else{say('bad','Could not scan: '+(e&&e.message?e.message:String(e))+' Try Show: All Bluetooth devices, then scan again.')}}
+};
+$('btId').onclick=async()=>{
+  const idBtn=$('btId');if(idBtn.disabled)return;
+  const out=$('btOut');out.textContent='';
+  const say=(cls,txt)=>{const d=document.createElement('div');d.className='bt '+cls;d.textContent=txt;out.prepend(d);return d};
+  if(!navigator.bluetooth){say('bad','This browser cannot use Bluetooth. Open this page in Bluefy.');return}
+  idBtn.disabled=true;let dev,ac=null,onAd=null;
+  try{
+  try{dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:BT_SERVICES,optionalManufacturerData:BT_MFR.map(m=>m[0])})}
+  catch(e){say('',(e&&e.name==='NotFoundError')||!e||!e.message||/^\d+$/.test(String(e.message))?'No device picked.':'Could not scan: '+e.message);return}
+  if(typeof dev.watchAdvertisements!=='function'){say('bad','This browser cannot listen to a device. Use the PC with Chrome for probes.');return}
+  const nm0=dev.name||'(no name)';
+  const w=say('ok','Listening to '+nm0+' for 12 seconds...');
+  let got=0,best=null,fp=false,codes={};
+  ac=new AbortController();
+  onAd=ev=>{got++;if(typeof ev.rssi==='number'&&(best===null||ev.rssi>best))best=ev.rssi;
+    try{if(ev.manufacturerData){ev.manufacturerData.forEach((v,k)=>{codes[k]=1;if(BT_MFR.some(m=>m[0]===k))fp=true})}}catch(e){}};
+  dev.addEventListener('advertisementreceived',onAd);
+  try{await dev.watchAdvertisements({signal:ac.signal})}catch(e){w.className='bt bad';w.textContent='Could not listen to this device: '+(e&&e.message?e.message:String(e));return}
+  await new Promise(r=>setTimeout(r,12000));
+  const sig=best===null?'':' Best signal: '+best+' dBm (closer to 0 = closer to the phone).';
+  const ck=Object.keys(codes);
+  if(fp){w.className='bt ok';w.textContent='YES: this is a Fieldpiece probe (maker code 5046).'+sig;
+    const lab='Fieldpiece probe '+String(dev.id||'').slice(-4);
+    const sb=document.createElement('button');sb.type='button';sb.className='btn ghost sm';sb.textContent='Save to My tools';
+    sb.onclick=()=>{myTools=myTools.filter(t=>t.name!==lab);myTools.unshift({name:lab,when:new Date().toLocaleDateString()});myTools=myTools.slice(0,50);saveTools();renderTools();sb.disabled=true;sb.textContent='Saved as '+lab};
+    w.appendChild(document.createElement('br'));w.appendChild(sb)}
+  else if(got===0){w.className='bt bad';w.textContent='Heard nothing from this device in 12 seconds. It may be asleep or out of range. Hold your probe closer and try again, or pick a different device.'}
+  else if(ck.length){w.className='bt bad';w.textContent='No Fieldpiece code heard (it announced maker code '+ck.join(', ')+'). That is a strong hint it is not your probe, not proof.'+sig+' Tap again and pick another device.'}
+  else{w.className='bt';w.textContent='No Fieldpiece code (5046) heard from this device in 12 seconds. Probably not your probe, but this is a hint, not proof: if you think it is, try once more. Some browsers also hide who made a device, so I cannot always tell.'+sig+' Tip: turn the probe off and on and see if this signal changes, or pick another.'}
+  }finally{try{if(ac)ac.abort()}catch(e){}try{if(dev&&onAd)dev.removeEventListener('advertisementreceived',onAd)}catch(e){}idBtn.disabled=false}
 };
 $('btCheck').onclick=()=>{
   const o=$('btCheckOut');o.textContent='';const b=navigator.bluetooth;
