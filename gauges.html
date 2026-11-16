@@ -73,11 +73,15 @@ a{color:#0b5cad}
 </div>
 <div class="card">
 <div class="pin"><div><label for="ts">Suction line temp (&deg;F)</label><input id="ts" inputmode="decimal" autocomplete="off"></div><div><label for="tl">Liquid line temp (&deg;F)</label><input id="tl" inputmode="decimal" autocomplete="off"></div></div>
-<div class="pin"><div><label for="tsh">Target superheat (&deg;F)</label><input id="tsh" inputmode="decimal" autocomplete="off" placeholder="from the maker's chart"></div><div><label for="tsc">Target subcooling (&deg;F)</label><input id="tsc" inputmode="decimal" autocomplete="off" placeholder="from the nameplate"></div></div>
+<label>Target superheat range (&deg;F), from &ndash; to</label>
+<div class="pin"><div><input id="tsh1" inputmode="decimal" autocomplete="off" placeholder="from" aria-label="Superheat target from"></div><div><input id="tsh2" inputmode="decimal" autocomplete="off" placeholder="to" aria-label="Superheat target to"></div></div>
+<label>Target subcooling range (&deg;F), from &ndash; to</label>
+<div class="pin"><div><input id="tsc1" inputmode="decimal" autocomplete="off" placeholder="from" aria-label="Subcooling target from"></div><div><input id="tsc2" inputmode="decimal" autocomplete="off" placeholder="to" aria-label="Subcooling target to"></div></div>
+<p class="mut">Type a range from the maker's chart or nameplate, for example 1 to 30. If you only know one number, type it in "from" and leave "to" empty: the page then uses that number plus or minus 3&deg;F (superheat) or 2&deg;F (subcooling).</p>
 <p class="mut" id="shmsg"></p>
 <details><summary>Tip: superheat (HVAC School)</summary><p>Superheat is how far the suction vapor is above its boiling (dew) point. HVAC School's rule of thumb for a TXV system is about 10&deg;F, give or take 5. For a fixed orifice, use the manufacturer's chart: HVAC School gives no single number for it.</p><p><a href="https://www.hvacrschool.com/the-5-pillars-of-residential-ac-refrigerant-circuit-diagnosis/" target="_blank" rel="noopener noreferrer">Read more at HVAC School</a></p></details>
 <details><summary>Tip: subcooling (HVAC School)</summary><p>Subcooling is how far the liquid is below its bubble point. HVAC School's rule of thumb for TXV systems is about 8&ndash;14&deg;F. Always check the nameplate target first.</p><p><a href="https://www.hvacrschool.com/the-5-pillars-of-residential-ac-refrigerant-circuit-diagnosis/" target="_blank" rel="noopener noreferrer">Read more at HVAC School</a></p></details>
-<p class="mut">Targets are typed by you. The page does not guess them. The OK / CHECK / BAD words use <b>our own</b> bands around YOUR target: OK within 3&deg;F (superheat) or 2&deg;F (subcooling), CHECK within 6&deg;F / 4&deg;F, otherwise BAD. These bands are not from MeasureQuick or HVAC School, and are tighter than HVAC School's &plusmn;5&deg;F rule of thumb, so a reading can be inside the rule of thumb and still say CHECK.</p>
+<p class="mut">Targets are typed by you. The page does not guess them. <b>&#10003; IN RANGE</b> = inside your range. <b>&#9660; LOW</b> / <b>&#9650; HIGH</b> = outside it: yellow (CHECK) if within 3&deg;F (superheat) or 2&deg;F (subcooling) of the range, red (BAD) if further. Those yellow margins are our own, not from MeasureQuick or HVAC School.</p>
 </div></section>
 
 <section class="page" id="p2" data-name="Airflow"><h2>Airflow</h2><div class="soon"><b>Next stage.</b> Return and supply readings, wet bulb, enthalpy, RH%, CFM per ton.</div></section>
@@ -138,27 +142,28 @@ function half(svg,val,min,max,zones){
   let big='--';if(val!==null){const[x,y]=P(fr(val));s+=`<line x1="${cx}" y1="${cy}" x2="${(cx+(x-cx)*.85).toFixed(1)}" y2="${(cy+(y-cy)*.85).toFixed(1)}" stroke="#222" stroke-width="2.5" stroke-linecap="round"/>`;big=r1(val)}
   s+=`<circle cx="${cx}" cy="${cy}" r="4" fill="#444"/><text x="${cx}" y="68" font-size="13" text-anchor="middle" font-weight="800" fill="#111">${big}</text><text x="${cx}" y="22" font-size="8" text-anchor="middle" fill="#777">&deg;F</text>`;
   svg.innerHTML=s}
-function zonesFor(t,g,y,min,max){if(t===null)return[];const a=Math.max(min,t-y),b=Math.max(min,t-g),c=Math.min(max,t+g),d=Math.min(max,t+y);
-  return[[min,a,'#3a7bd5'],[a,b,'#f2b705'],[b,c,'#2e9e4f'],[c,d,'#f2b705'],[d,max,'#d32f2f']]}
-function word(el,dev,g,y){let w='NOT CHECKED';if(dev!==null){const a=Math.abs(dev);w=a<=g?'OK':a<=y?'CHECK':'BAD'}el.textContent=w;el.className='word '+(w==='NOT CHECKED'?'':w)}
+function rng(a,b,m){const x=num(a),y=num(b);if(x===null&&y===null)return null;if(x!==null&&y!==null)return{lo:Math.min(x,y),hi:Math.max(x,y),single:false};const t=x!==null?x:y;return{lo:t-m,hi:t+m,single:true}}
+function zonesFor(r,y,min,max){if(r===null)return[];const c=v=>Math.max(min,Math.min(max,v)),lo=c(r.lo),hi=c(r.hi),a=c(r.lo-y),d=c(r.hi+y);
+  return[[min,a,'#3a7bd5'],[a,lo,'#f2b705'],[lo,hi,'#2e9e4f'],[hi,d,'#f2b705'],[d,max,'#d32f2f']]}
+function word(el,val,r,m){let w='NOT CHECKED',cls='';if(val!==null&&r!==null){if(val>=r.lo&&val<=r.hi){w='✓ IN RANGE';cls='OK'}else{const low=val<r.lo,d=low?r.lo-val:val-r.hi;w=(low?'▼ LOW':'▲ HIGH');cls=d<=m?'CHECK':'BAD'}}el.textContent=w;el.className='word '+cls}
 function draw(){
   const ref=$('ref').value,pl=num($('pl').value),ph=num($('ph').value),A=atm();
   const lowSat=dial($('gLow'),ref,'dew','LOW',pl!==null&&pl+A>0?pl:null,'#1e88e5','#0d3b82');
   const highSat=dial($('gHigh'),ref,'bub','HIGH',ph!==null&&ph+A>0?ph:null,'#e53935','#7f1717');
   // glide note
   const d=PT[ref],i=80,gl=d.bub[i]-d.dew[i]; $('glide').innerHTML=Math.abs(gl)<1.5?'Almost no glide (dew and bubble are nearly the same).':'Blend with glide: at 40&deg;F the dew point is '+r1(d.dew[i]-A)+' psig and the bubble point is '+r1(d.bub[i]-A)+' psig. The page uses the <b>dew</b> point for superheat and the <b>bubble</b> point for subcooling.';
-  const ts=num($('ts').value),tl=num($('tl').value),tsh=num($('tsh').value),tsc=num($('tsc').value);
+  const ts=num($('ts').value),tl=num($('tl').value),rsh=rng($('tsh1').value,$('tsh2').value,3),rsc=rng($('tsc1').value,$('tsc2').value,2);
   const sh=lowSat!==null&&ts!==null?ts-lowSat:null,sc=highSat!==null&&tl!==null?highSat-tl:null;
   half($('dSuc'),ts,-20,100,[]);half($('dLiq'),tl,40,180,[]);
-  half($('dSh'),sh,-10,50,zonesFor(tsh,3,6,-10,50));half($('dSc'),sc,-5,35,zonesFor(tsc,2,4,-5,35));
-  word($('wSh'),sh!==null&&tsh!==null?sh-tsh:null,3,6);word($('wSc'),sc!==null&&tsc!==null?sc-tsc:null,2,4);
+  half($('dSh'),sh,-10,50,zonesFor(rsh,3,-10,50));half($('dSc'),sc,-5,35,zonesFor(rsc,2,-5,35));
+  word($('wSh'),sh,rsh,3);word($('wSc'),sc,rsc,2);
   let m=[];
   if(sh!==null)m.push('Superheat '+r1(sh)+'°F = suction line '+r1(ts)+' − dew point '+r1(lowSat)+'.');if(sc!==null)m.push('Subcooling '+r1(sc)+'°F = bubble point '+r1(highSat)+' − liquid line '+r1(tl)+'.');
   if(sh===null&&sc===null&&!m.length)m.push('Type the pressures above, then the line temperatures.');$('shmsg').textContent=m.join(' ');
   const W=[];
   if($('atm').value.trim()!==''&&!atmOk())W.push('Atmospheric pressure must be a number of psia between 5 and 16 (sea level is 14.696). Using 14.696 for now.');
   [['pl','Low side'],['ph','High side']].forEach(([id,nm])=>{const raw=$(id).value.trim(),v=num(raw);if(raw!==''&&v===null)W.push(nm+' pressure is not a number.');else if(v!==null&&v+A<=0)W.push(nm+' pressure is at or below a perfect vacuum for this atmosphere, so it cannot be shown.')});
-  [['ts','Suction line temp'],['tl','Liquid line temp'],['tsh','Target superheat'],['tsc','Target subcooling']].forEach(([id,nm])=>{const raw=$(id).value.trim();if(raw!==''&&num(raw)===null)W.push(nm+' is not a number.')});
+  [['ts','Suction line temp'],['tl','Liquid line temp'],['tsh1','Superheat target from'],['tsh2','Superheat target to'],['tsc1','Subcooling target from'],['tsc2','Subcooling target to']].forEach(([id,nm])=>{const raw=$(id).value.trim();if(raw!==''&&num(raw)===null)W.push(nm+' is not a number.')});
   if(pl!==null&&pl+A>0&&lowSat===null)W.push('Low side pressure is outside the table for this refrigerant, so no saturation temperature is shown.');
   if(ph!==null&&ph+A>0&&highSat===null)W.push('High side pressure is outside the table for this refrigerant, so no saturation temperature is shown.');
   if(pl!==null&&ph!==null&&ph<=pl)W.push('High side is not higher than low side. Check the readings and which hose is which.');
@@ -173,9 +178,9 @@ function draw(){
 // refrigerant list
 Object.keys(PT).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;$('ref').appendChild(o)});
 $('ref').value='R-410A';
-['ref','pl','ph','ts','tl','tsh','tsc','atm'].forEach(id=>$(id).addEventListener('input',draw));
+['ref','pl','ph','ts','tl','tsh1','tsh2','tsc1','tsc2','atm'].forEach(id=>$(id).addEventListener('input',draw));
 // iPhone's decimal keypad has no minus key: give each temperature / low-side box a +/- button
-['pl','ts','tl','tsh','tsc'].forEach(id=>{const i=$(id),w=document.createElement('div');w.className='wrap';i.parentNode.insertBefore(w,i);w.appendChild(i);const b=document.createElement('button');b.type='button';b.className='sgn';b.textContent='±';b.setAttribute('aria-label','Switch between plus and minus');
+['pl','ts','tl','tsh1','tsh2','tsc1','tsc2'].forEach(id=>{const i=$(id),w=document.createElement('div');w.className='wrap';i.parentNode.insertBefore(w,i);w.appendChild(i);const b=document.createElement('button');b.type='button';b.className='sgn';b.textContent='±';b.setAttribute('aria-label','Switch between plus and minus');
   b.onclick=()=>{const v=i.value.trim();i.value=v.startsWith('-')?v.slice(1):(v===''?'-':'-'+v);i.dispatchEvent(new Event('input',{bubbles:true}));i.focus()};w.appendChild(b)});
 // slider
 const sl=$('slider'),pages=[...sl.children],icons=['i','❄','🏠','⚙','⚡'];
