@@ -373,6 +373,7 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <div class="tab" id="tTools" hidden>
 <div class="card"><b>Find Bluetooth tools</b>
 <p class="mut">Turn the probe on, tap Scan, and pick it from the list. This only looks at the probe and connects. It sends nothing to the probe.</p>
+<p class="mut"><b>Heads up:</b> Bluefy sometimes shows <b>every</b> nearby Bluetooth device even with the filter on. If that happens, look for your tool by its name (for example &ldquo;testo 549i&rdquo;). While Show is &ldquo;Only my tool brands,&rdquo; the page tells you and does not connect if you pick something that is not one of your brands. In &ldquo;All Bluetooth devices&rdquo; mode it connects to whatever you pick.</p>
 <label for="btMode">Show</label>
 <select id="btMode" aria-label="Which Bluetooth devices to show"><option value="mine">Only my tool brands (recommended)</option><option value="all">All Bluetooth devices (to teach the page a new tool)</option></select>
 <details><summary>Brands searched</summary>
@@ -383,6 +384,8 @@ textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);b
 <div id="myPrefixes" class="mut"></div>
 </details>
 <button type="button" class="btn" id="btScan">Scan for a tool</button>
+<button type="button" class="btn ghost" id="btCheck">Check what this browser can do</button>
+<div id="btCheckOut" class="mut"></div>
 <div id="btOut"></div>
 </div>
 <div class="card"><b>My tools</b><div id="myTools" class="mut">No tools saved yet.</div></div>
@@ -743,7 +746,7 @@ function renderTools(){
 const BT_BRANDS=[['Fieldpiece',['Fieldpiece','JL3','JL2','SMAN']],['UEi',['UEi','UEI']],['Testo',['testo','Testo']],['Fluke',['Fluke','FLUKE']],['Govee',['Govee','GVH','ihoment']],['RetroTech',['Retro']],['NAVAC',['NAVAC','Navac']],['CPS',['CPS']],['Redfish',['Redfish','iDVM']],['Sauermann',['Sauermann','Si-']],['Seitron',['Seitron']],['Yellow Jacket',['Yellow','YJ-']],['Parker Sporlan',['Sporlan']],['AccuTools / BluVac',['BluVac','BLUVAC','AccuTools','BluFlame']],['iManifold',['iManifold','iConnect']],['Bacharach',['Bacharach','Fyrite']],['Sensorcon',['Sensorcon']],['JB Industries',['JB-','JB_']],['TEC (TrueFlow)',['TEC-','TrueFlow']]];
 const BT_SERVICES=['battery_service','device_information','generic_access','environmental_sensing','health_thermometer'];
 let myPrefixes=[];try{myPrefixes=JSON.parse(localStorage.getItem('dsc_prefixes')||'[]')}catch(e){myPrefixes=[]}
-myPrefixes=(Array.isArray(myPrefixes)?myPrefixes:[]).filter(x=>typeof x==='string'&&x.length>=2&&x.length<=30).slice(0,40);
+myPrefixes=(Array.isArray(myPrefixes)?myPrefixes:[]).filter(x=>typeof x==='string'&&x.length>=3&&x.length<=30).slice(0,40);
 function savePrefixes(){try{localStorage.setItem('dsc_prefixes',JSON.stringify(myPrefixes))}catch(e){}}
 function btPrefixList(){const all=[];BT_BRANDS.forEach(b=>b[1].forEach(x=>all.push(x)));myPrefixes.forEach(x=>all.push(x));const out=[];all.forEach(x=>{[x,x.toUpperCase(),x.toLowerCase()].forEach(v=>{if(out.indexOf(v)<0)out.push(v)})});return out}
 function btOptions(){return $('btMode').value==='all'?{acceptAllDevices:true,optionalServices:BT_SERVICES}:{filters:btPrefixList().map(x=>({namePrefix:x})),optionalServices:BT_SERVICES}}
@@ -753,24 +756,40 @@ function renderBrands(){
   const box=$('myPrefixes');box.textContent='';
   if(!myPrefixes.length){box.textContent='No extra names added yet.';return}
   myPrefixes.forEach((x,i)=>{const d=document.createElement('div');d.className='toolrow';const sp=document.createElement('span');sp.textContent=x;d.appendChild(sp);const b=document.createElement('button');b.className='btn ghost sm';b.textContent='Remove';b.type='button';b.onclick=()=>{myPrefixes.splice(i,1);savePrefixes();renderBrands()};d.appendChild(b);box.appendChild(d)})}
-function addPrefix(x){x=String(x||'').trim();if(x.length<2||x.length>30)return false;if(myPrefixes.indexOf(x)<0){myPrefixes.unshift(x);myPrefixes=myPrefixes.slice(0,40);savePrefixes()}renderBrands();return true}
+function addPrefix(x){x=String(x||'').trim();if(x.length<3||x.length>30)return false;if(myPrefixes.indexOf(x)<0){myPrefixes.unshift(x);myPrefixes=myPrefixes.slice(0,40);savePrefixes()}renderBrands();return true}
 $('btAddPrefix').onclick=()=>{if(addPrefix($('btPrefix').value))$('btPrefix').value=''};
 renderBrands();
+function looksMine(nm){const n=String(nm||'').trim().toLowerCase();return btPrefixList().some(x=>n.indexOf(x.toLowerCase())===0)}
+async function btConnect(dev,nm,say){
+  const c=say('ok','Picked '+nm+'. Connecting...');
+  try{
+    const srv=await dev.gatt.connect();const list=await srv.getPrimaryServices();
+    c.textContent='Connected to '+nm+'. Services it showed: '+(list.length?list.map(s=>s.uuid).join(', '):'none (it may hide custom services).');
+    const sb=document.createElement('button');sb.type='button';sb.className='btn ghost sm';sb.textContent='Save to My tools';
+    sb.onclick=()=>{myTools=myTools.filter(t=>t.name!==nm);myTools.unshift({name:nm,when:new Date().toLocaleDateString()});myTools=myTools.slice(0,50);saveTools();renderTools();sb.disabled=true;sb.textContent='Saved'};
+    const nb=document.createElement('button');nb.type='button';nb.className='btn ghost sm';nb.textContent='Find this tool by name next time';nb.onclick=()=>{if(addPrefix(prefixFromName(nm))){nb.disabled=true;nb.textContent='Added: '+prefixFromName(nm)}};if(nm==='(no name)')nb.hidden=true;
+    c.appendChild(document.createElement('br'));c.appendChild(sb);c.appendChild(document.createTextNode(' '));c.appendChild(nb);try{dev.gatt.disconnect()}catch(e){}
+  }catch(e){c.className='bt bad';c.textContent='Could not connect: '+(e&&e.message?e.message:String(e))}}
 $('btScan').onclick=async()=>{
   const out=$('btOut');out.textContent='';
   const say=(cls,txt)=>{const d=document.createElement('div');d.className='bt '+cls;d.textContent=txt;out.prepend(d);return d};
   if(!navigator.bluetooth){say('bad','This browser cannot use Bluetooth. Open this page in Bluefy.');return}
   try{
     const dev=await navigator.bluetooth.requestDevice(btOptions());
-    const nm=dev.name||'(no name)';const c=say('ok','Picked '+nm+'. Connecting...');
-    const srv=await dev.gatt.connect();const list=await srv.getPrimaryServices();
-    c.textContent='Connected to '+nm+'. Services it showed: '+(list.length?list.map(s=>s.uuid).join(', '):'none (it may hide custom services).');
-    const sb=document.createElement('button');sb.type='button';sb.className='btn ghost sm';sb.textContent='Save to My tools';
-    sb.onclick=()=>{myTools=myTools.filter(t=>t.name!==nm);myTools.unshift({name:nm,when:new Date().toLocaleDateString()});myTools=myTools.slice(0,50);saveTools();renderTools();sb.disabled=true;sb.textContent='Saved'};
-    const nb=document.createElement('button');nb.type='button';nb.className='btn ghost sm';nb.textContent='Find this tool by name next time';nb.onclick=()=>{if(addPrefix(prefixFromName(nm))){nb.disabled=true;nb.textContent='Added: '+prefixFromName(nm)}};
-    c.appendChild(document.createElement('br'));c.appendChild(sb);c.appendChild(document.createTextNode(' '));c.appendChild(nb);dev.gatt.disconnect();
-  }catch(e){if(e&&e.name==='NotFoundError'){say('',$('btMode').value==='mine'?'No tool picked (or none of your brands was found). If your tool did not show up, switch Show to All Bluetooth devices, pick it once, and tap Find this tool by name next time.':'No tool picked.')}else{const w=out.querySelector('.ok');const m='Could not connect: '+(e&&e.message?e.message:String(e));if(w){w.className='bt bad';w.textContent=m}else say('bad',m)}}
+    const nm=dev.name||'(no name)';
+    if($('btMode').value==='mine'&&!looksMine(nm)){
+      const w=say('bad','"'+nm+'" does not look like one of your tool brands, so nothing was connected. Bluefy may be showing every device and ignoring the name filter. Scan again and pick your tool by its name.');
+      const yes=document.createElement('button');yes.type='button';yes.className='btn ghost sm';yes.textContent='This IS my tool: connect and remember its name';
+      yes.onclick=()=>{yes.disabled=true;if(nm!=='(no name)')addPrefix(prefixFromName(nm));w.className='bt';w.textContent='Connecting to '+nm+'...';btConnect(dev,nm,say)};
+      w.appendChild(document.createElement('br'));w.appendChild(yes);return}
+    await btConnect(dev,nm,say);
+  }catch(e){if(e&&e.name==='NotFoundError'){say('',$('btMode').value==='mine'?'No tool picked (or none of your brands was found). If your tool did not show up, switch Show to All Bluetooth devices, pick it once, and tap Find this tool by name next time.':'No tool picked.')}else{say('bad','Could not scan: '+(e&&e.message?e.message:String(e))+' Try Show: All Bluetooth devices, then scan again.')}}
 };
+$('btCheck').onclick=()=>{
+  const o=$('btCheckOut');o.textContent='';const b=navigator.bluetooth;
+  const rows=[['Web Bluetooth',!!b],['Pick a tool (requestDevice)',!!(b&&b.requestDevice)],['Scan for nearby tools (requestLEScan)',!!(b&&b.requestLEScan)],['Listen to a tool (watchAdvertisements)',typeof BluetoothDevice!=='undefined'&&!!BluetoothDevice.prototype&&!!BluetoothDevice.prototype.watchAdvertisements],['Remembered tools (getDevices)',!!(b&&b.getDevices)]];
+  rows.forEach(r=>{const d=document.createElement('div');d.textContent=r[0]+': '+(r[1]?'yes':'no');o.appendChild(d)});
+  const u=document.createElement('div');u.textContent='Browser: '+String(navigator.userAgent).slice(0,110);o.appendChild(u)};
 // ---- Diagnostics (flags) and tap-a-reading detail ----
 const E=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x};
 let trend={};
