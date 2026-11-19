@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://geocode.arcgis.com; img-src data: https://services.arcgisonline.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://geocode.arcgis.com https://dsc-tech-jobs.anthonys24fit.workers.dev; img-src data: https://services.arcgisonline.com">
 <meta name="color-scheme" content="light">
 <title>DSC Gauges</title>
 <style>
@@ -255,6 +255,7 @@ details.fold[open]>summary{border-color:var(--acc)}
 #resume{border:2px solid var(--yel);background:#fffbe0}
 #resume>b:first-child{border-left-color:var(--yel)}
 .mut{color:#4a5565}
+.hcprow{display:flex;gap:8px;align-items:stretch}.hcprow input{flex:1;min-width:0}.hcprow .btn{margin:0;flex:0 0 auto;min-height:56px;padding:0 18px}
 .brandfoot{text-align:center;margin:22px 8px 8px;color:#4a5565;font-size:13px}
 .brandfoot b{display:block;color:var(--navy);font-size:15px}
 .brandfoot i{display:block;height:5px;margin:0 auto 8px;max-width:160px;border-radius:3px;background:linear-gradient(90deg,#2558fd 0%,#2558fd 38%,#f8d207 50%,#e01b20 62%,#e01b20 100%)}
@@ -278,10 +279,16 @@ body.bigt .helpbtn{font-size:18px;min-height:52px}
 
 <!-- ============ HOME ============ -->
 <div class="tab" id="tHome">
+<div class="card" id="hcpCard"><b>Housecall Pro job</b>
+<label for="hcpNum">Job number</label>
+<div class="hcprow"><input id="hcpNum" inputmode="numeric" autocomplete="off" placeholder="e.g. 20174" enterkeyhint="go"><button type="button" class="btn sm" id="hcpGo">Fill it in</button></div>
+<p class="mut" id="hcpMsg" role="status"></p></div>
 <div class="card"><b>Job</b>
 <label for="jobName">Job name</label><input id="jobName" autocomplete="off" placeholder="e.g. customer last name or street" enterkeyhint="next">
 <label for="custName">Customer name</label><input id="custName" autocomplete="off" enterkeyhint="next">
 <label for="custAddr">Job address</label><input id="custAddr" autocomplete="off" enterkeyhint="next">
+<label for="callReason">Reason for the call (from the booking)</label><input id="callReason" autocomplete="off" enterkeyhint="next">
+<label class="chk"><input type="checkbox" id="callPrint"><span>Print the reason on the customer report (the office wrote it, so read it first)</span></label>
 <div class="pin"><div><label for="techName">Technician name (remembered)</label><input id="techName" autocomplete="off" enterkeyhint="done"></div><div><label for="jobDate">Date</label><input id="jobDate" type="date"></div></div>
 </div>
 
@@ -316,7 +323,8 @@ body.bigt .helpbtn{font-size:18px;min-height:52px}
 <h2 class="gh">Optional setup</h2>
 <details class="fold" id="fNameplate"><summary>Nameplate (only if you will check volts and amps)</summary><div class="card">
 <label for="rv">Rated volts</label><input id="rv" inputmode="decimal" autocomplete="off" placeholder="e.g. 230">
-<div class="pin"><div><label for="cph">Condenser supply</label><select id="cph"><option value="1">Single phase</option><option value="3">Three phase</option></select></div><div><label for="crla">Condenser RLA (not MCA)</label><input id="crla" inputmode="decimal" autocomplete="off"></div></div>
+<div class="pin"><div><label for="cph">Condenser supply</label><select id="cph"><option value="1">Single phase</option><option value="3">Three phase</option></select></div><div><label for="crla">Compressor RLA (not MCA)</label><input id="crla" inputmode="decimal" autocomplete="off"></div></div>
+<label for="cfla">Condenser fan motor FLA (the page adds it to the compressor RLA, so rated amps = the whole outdoor unit)</label><input id="cfla" inputmode="decimal" autocomplete="off" placeholder="from the nameplate, e.g. 1.5">
 <div class="pin"><div><label for="hph">Air handler supply</label><select id="hph"><option value="1">Single phase</option><option value="3">Three phase</option></select></div><div><label for="hfla">Air handler FLA / motor amps</label><input id="hfla" inputmode="decimal" autocomplete="off"></div></div>
 <label for="reer">Rated EER (optional)</label><input id="reer" inputmode="decimal" autocomplete="off">
 </div></details>
@@ -723,9 +731,9 @@ function drawCore3(){
   const pos=x=>x!==null&&x>0?x:null;
   const unit=(v,a,pf,phv)=>{const ph=phv==='3'?1.732:1;const V=pos(num(v)),Am=pos(num(a)),P=num(pf),PF=P!==null&&P>0&&P<=1?P:null;const kva=V!==null&&Am!==null?V*Am*ph/1000:null;const w=kva!==null&&PF!==null?kva*1000*PF:null;return{V,A:Am,PF,kva,w}};
   const C=unit($('cv').value,$('ca').value,$('cpf').value,$('cph').value),H=unit($('hv').value,$('ha').value,$('hpf').value,$('hph').value);
-  const rv=pos(num($('rv').value)),crla=pos(num($('crla').value)),hfla=pos(num($('hfla').value)),reer=pos(num($('reer').value));
+  const rv=pos(num($('rv').value)),crla0=pos(num($('crla').value)),cfla=pos(num($('cfla').value)),crla=crla0!==null?crla0+(cfla||0):null,hfla=pos(num($('hfla').value)),reer=pos(num($('reer').value));
   const M=[];
-  [['rv','Rated volts'],['cv','Condenser volts'],['ca','Condenser amps'],['cpf','Condenser power factor'],['crla','Condenser rated amps'],['hv','Air handler volts'],['ha','Air handler amps'],['hpf','Air handler power factor'],['hfla','Air handler rated amps'],['reer','Rated EER']].forEach(([id,nm])=>{const r=$(id).value.trim();if(r!==''&&num(r)===null)M.push(nm+' is not a number.');else if(r!==''&&id!=='cpf'&&id!=='hpf'&&num(r)<=0)M.push(nm+' must be more than 0.')});
+  [['rv','Rated volts'],['cv','Condenser volts'],['ca','Condenser amps'],['cpf','Condenser power factor'],['crla','Compressor rated amps'],['cfla','Condenser fan rated amps'],['hv','Air handler volts'],['ha','Air handler amps'],['hpf','Air handler power factor'],['hfla','Air handler rated amps'],['reer','Rated EER']].forEach(([id,nm])=>{const r=$(id).value.trim();if(r!==''&&num(r)===null)M.push(nm+' is not a number.');else if(r!==''&&id!=='cpf'&&id!=='hpf'&&num(r)<=0)M.push(nm+' must be more than 0.')});
   if((C.V!==null||H.V!==null)&&rv===null)M.push('Type the rated volts to check the volts reading.');
   [['cpf','Condenser'],['hpf','Air handler']].forEach(([id,nm])=>{const v=num($(id).value);if(v!==null&&!(v>0&&v<=1))M.push(nm+' power factor must be more than 0 and no more than 1. It is ignored.')});
   window.__calc=Object.assign(window.__calc||{},{cAp:C.A!==null&&crla?100*C.A/crla:null,hAp:H.A!==null&&hfla?100*H.A/hfla:null,cVp:C.V!==null&&rv?100*C.V/rv:null,hVp:H.V!==null&&rv?100*H.V/rv:null});
@@ -748,7 +756,7 @@ function drawCore3(){
   $('eMsg').textContent=M.join(' ');
 }
 ['rdb','sdb','rhv','shv','rmode','smode','cfm','tons','tesp','tespmax','tsp1','tsp2','tpt1','tpt2','oat','dcfm','seer','meter','tsh1','tsh2','tsc1','tsc2'].forEach(id=>$(id).addEventListener('input',()=>{draw();draw2()}));
-['cph','hph','rv','cv','ca','cpf','crla','hv','ha','hpf','hfla','reer'].forEach(id=>$(id).addEventListener('input',draw3));
+['cph','hph','rv','cv','ca','cpf','crla','cfla','hv','ha','hpf','hfla','reer'].forEach(id=>$(id).addEventListener('input',draw3));
 [['rmode','rhv','rhl','Return'],['smode','shv','shl','Supply']].forEach(([m,v,l,nm])=>$(m).addEventListener('change',()=>{const rh=$(m).value==='rh';$(l).textContent=nm+(rh?' RH (%)':' wet bulb (\u00B0F)');$(v).value='';draw2()}));
 $('ref').addEventListener('input',draw2);$('atm').addEventListener('input',draw2);
 draw2();
@@ -849,9 +857,7 @@ function renderGridCalc(){
 }
 // new job
 let clrT=null;
-$('clearAll').onclick=()=>{
-  if(!clrT){$('clearAll').textContent='Tap again to clear everything';$('clearMsg').textContent='This clears every box on every tab. Your saved tools stay.';clrT=setTimeout(()=>{clrT=null;$('clearAll').textContent='New job (clear everything)';$('clearMsg').textContent=''},4000);return}
-  clearTimeout(clrT);clrT=null;
+function wipeJob(){
   document.querySelectorAll('main input,main textarea').forEach(i=>{if(i.closest('#tTools'))return;if(i.type==='checkbox')i.checked=i.defaultChecked;else i.value=i.defaultValue});aerial=null;locSeq++;locEdited=false;$('locAddr').value='';$('locOk').checked=false;locUi();
   document.querySelectorAll('main select').forEach(s=>{const k=[...s.options].findIndex(o=>o.defaultSelected);s.selectedIndex=k<0?0:k});
   $('jobDate').value=todayStr();
@@ -859,6 +865,11 @@ $('clearAll').onclick=()=>{
   clearTimeout(saveT);$('resume').hidden=true;try{localStorage.removeItem('dsc_job')}catch(e){}
   try{const tn=localStorage.getItem('dsc_tech');if(tn)$('techName').value=tn}catch(e){}
   window.__calc={};window.__stash={};trend={};hjob();onTtype();
+  hcpSay('');delete $('hcpNum').dataset.filled}
+$('clearAll').onclick=()=>{
+  if(!clrT){$('clearAll').textContent='Tap again to clear everything';$('clearMsg').textContent='This clears every box on every tab. Your saved tools stay.';clrT=setTimeout(()=>{clrT=null;$('clearAll').textContent='New job (clear everything)';$('clearMsg').textContent=''},4000);return}
+  clearTimeout(clrT);clrT=null;
+  wipeJob();
   $('clearAll').textContent='New job (clear everything)';$('clearMsg').textContent='Cleared.';setTimeout(()=>{$('clearMsg').textContent=''},3000);
   showTab('Home');
 };
@@ -1146,8 +1157,8 @@ function buildReport(){
   // ===== page 1
   const p1=rEl(R,'section','rpage');rHeader(p1,'Your Air Conditioning System Health Report');
   const info=rEl(p1,'div','rinfo');
-  [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
-  if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo of the job location';img.src=aerial.url;img.onerror=()=>{if(!aerial||img.getAttribute('src')!==aerial.url)return;rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null;locUi()};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));const needOk=aerial.src!=='gps',okd=$('locOk').checked;if(needOk&&!okd){ph.classList.add('rnoprint');ph.appendChild(E('div','rsmall rnoprint','NOT ON THE PRINTED REPORT YET: tick "I checked: the red dot is on the right house" above to include this picture.'))}const how=(needOk&&okd?'Checked by the technician. ':'')+(aerial.src==='gps'?'Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m).':aerial.src==='address'?'Aerial view found from the typed address, which can be off by a house or more.':'Aerial view positioned by the technician.');ph.appendChild(E('div','rsmall',how+' Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
+  [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Job number',/^\d{1,12}$/.test($('hcpNum').value.trim())?$('hcpNum').value.trim():''],['Reason for the call',$('callPrint').checked?$('callReason').value.trim():''],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
+  if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo of the job location';img.src=aerial.url;img.onerror=()=>{if(!aerial||img.getAttribute('src')!==aerial.url)return;rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null;locUi()};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));const needOk=aerial.src!=='gps',okd=$('locOk').checked;if(needOk&&!okd){ph.classList.add('rnoprint');ph.appendChild(E('div','rsmall rnoprint','NOT ON THE PRINTED REPORT YET: tick "I checked: the red dot is on the right house" above to include this picture.'))}const how=(needOk&&okd?'Checked by the technician. ':'')+(aerial.src==='gps'?'Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m).':aerial.src==='hcp'?'Aerial view of the job address from Housecall Pro, which can be off by a house or more.':aerial.src==='address'?'Aerial view found from the typed address, which can be off by a house or more.':'Aerial view positioned by the technician.');ph.appendChild(E('div','rsmall',how+' Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
   const v=VERDICT[f.top],vb=rEl(p1,'div','rverdict');vb.style.borderColor=FLAGCOLR[f.top];vb.style.background=f.top==='black'?'#ececec':f.top==='red'?'#fde7e7':f.top==='green'?'#e3f5e8':(f.top==='na'||f.top==='partial')?'#eef1f4':'#fff6d6';
   const vi=rEl(vb,'span','rvico',FLAGICO[f.top]);vi.style.color=FLAGCOLR[f.top];
   const vt=rEl(vb,'div','rvtxt');vt.appendChild(E('b','',v[0]));vt.appendChild(E('div','',v[1]));
@@ -1322,19 +1333,73 @@ function applySaved(j){
   try{const els=SAVE_IDS();
     els.filter(el=>el.tagName==='SELECT').forEach(el=>{if(el.id in j.v&&[...el.options].some(o=>o.value===String(j.v[el.id]))){el.value=j.v[el.id];el.dispatchEvent(new Event('change',{bubbles:true}))}});
     els.filter(el=>el.tagName!=='SELECT').forEach(el=>{if(!(el.id in j.v))return;if(el.type==='checkbox'){el.checked=j.v[el.id]===true}else if(typeof j.v[el.id]==='string'&&el.id!=='jobDate'&&el.id!=='techName'){el.value=j.v[el.id]}el.dispatchEvent(new Event('input',{bubbles:true}))});
-    hjob();onTtype();gridProg()}catch(e){}
+    hjob();onTtype();gridProg();if(/^\d{1,12}$/.test($('hcpNum').value.trim()))$('hcpNum').dataset.filled=$('hcpNum').value.trim()}catch(e){}
   restoring=false}
-function offerResume(){
-  const j=savedJob();if(!j)return;
+function offerResume(onNew){
+  const j=savedJob();if(!j){if(onNew)onNew();return}
   const v=j.v||{},nm=(typeof v.jobName==='string'&&v.jobName.trim())||(typeof v.custName==='string'&&v.custName.trim())||'no name';
   const hrs=Math.max(0,Math.round((Date.now()-j.t)/360000)/10);
   $('resumeTxt').textContent='Job: '+nm+' (last typed '+(hrs<0.1?'just now':hrs+' hours ago')+'). Keep going on it, or start a new job?';
   $('resume').hidden=false;
   $('resumeYes').onclick=()=>{$('resume').hidden=true;applySaved(j);showTab('Home')};
-  $('resumeNo').onclick=()=>{$('resume').hidden=true;try{localStorage.removeItem('dsc_job')}catch(e){}}}
+  $('resumeNo').onclick=()=>{$('resume').hidden=true;try{localStorage.removeItem('dsc_job')}catch(e){}if(onNew)onNew()}}
+// ---- Housecall Pro: customer, address, job type and call reason come straight from the job (read-only, through the Hub) ----
+const HUB='https://dsc-tech-jobs.anthonys24fit.workers.dev';
+const KEYRE=/^g1-pro_[a-z0-9]{8,64}-(\d{10})-[a-f0-9]{32}$/i;
+function keyOk(k){const m=KEYRE.exec(String(k||''));return !!m&&Number(m[1])>Date.now()/1000}
+function hubKey(){try{const k=localStorage.getItem('dsc_hubkey');return keyOk(k)?k:''}catch(e){return ''}}
+function hcpSay(t){$('hcpMsg').textContent=t||''}
+let hcpSeq=0;
+async function hcpFill(auto){
+  const n=$('hcpNum').value.trim(),k=hubKey();
+  if(!/^\d{1,12}$/.test(n)){hcpSay('Type the Housecall Pro job number (digits only).');return}
+  if(!k){hcpSay('This phone is not linked, or the link ran out (it lasts 12 hours). Open this page from "Start gauges test" on your job in the Hub, then you can type any of your job numbers here.');return}
+  if($('hcpGo').disabled)return;
+  const typed=[...document.querySelectorAll('#tGrid .tile[data-for] input')].some(i=>i.value.trim()!=='');
+  let wipeAfter=false;
+  const prev=$('hcpNum').dataset.filled;
+  if(!auto&&typed&&prev&&prev!==n){    // readings belong to an EARLIER Housecall Pro job: ask first, and wipe only after the new job is found
+    if($('hcpNum').dataset.ask!==n){$('hcpNum').dataset.ask=n;hcpSay('You have readings typed for job '+prev+'. Tap "Fill it in" again to start job '+n+' (this clears those readings and the customer). To keep them, change the number back.');return}
+    delete $('hcpNum').dataset.ask;wipeAfter=true}
+  const seq=++hcpSeq;$('hcpGo').disabled=true;hcpSay('Looking up job '+n+'...');
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000);
+  try{
+    const r=await fetch(HUB+'/g/'+encodeURIComponent(k)+'/job?number='+encodeURIComponent(n),{signal:ac.signal,cache:'no-store',credentials:'omit'});
+    let j=null;try{j=await r.json()}catch(e){j=null}
+    if(seq!==hcpSeq)return;
+    if(!r.ok||!j||j.ok!==true||!j.job||typeof j.job!=='object'){
+      hcpSay(r.status===404&&j&&/No job/.test(String(j.error||''))?'No job with that number is assigned to you in the last two weeks.':(r.status===404?'This phone’s link ran out or no longer works. Open the Hub again and use "Start gauges test".':(j&&typeof j.error==='string'?j.error.slice(0,160):'The lookup did not work. Try again.')));return}
+    const b=j.job,str=(v,m)=>typeof v==='string'?v.slice(0,m):'';
+    const cust=str(b.customer,120),addr=str(b.address,200),jt=str(b.jobType,80),ds=str(b.description,300);
+    const reason=[jt,ds&&ds!==jt?ds:''].filter(Boolean).join(' - ');
+    if(wipeAfter){wipeJob();$('hcpNum').value=n}
+    const put=(id,v)=>{$(id).value=v;$(id).dispatchEvent(new Event('input',{bubbles:true}))};
+    put('jobName','Job #'+n);if(cust)put('custName',cust);if(addr)put('custAddr',addr);if(reason)put('callReason',reason);
+    $('hcpNum').dataset.filled=n;
+    if(addr){locEdited=false;$('locAddr').value=addr}
+    const lat=typeof b.lat==='number'?b.lat:null,lon=typeof b.lon==='number'?b.lon:null;
+    if(lat!==null&&lon!==null){locSeq++;setAerial(lat,lon,130,'hcp',null,addr)}
+    hcpSay('Filled in from Housecall Pro: '+(cust||'customer')+(addr?', '+addr:'')+'. Check them against the job.'+(lat!==null?' The aerial photo is set from the job address: check the red dot in the report.':''));
+  }catch(e){if(seq===hcpSeq)hcpSay(e&&e.name==='AbortError'?'The lookup took too long. Check your signal and try again.':'Could not reach Housecall Pro. Check your signal, or type the details yourself.')}
+  finally{clearTimeout(to);if(seq===hcpSeq)$('hcpGo').disabled=false}}
+$('hcpGo').onclick=()=>hcpFill(false);
+$('hcpNum').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();hcpFill(false)}});
+// The Hub opens this page as ...gauges.html#job=20174&k=<private key>. The # part is never sent to any server; it is read once, kept on this phone, then removed from the address.
+function hcpBoot(){
+  let jobParam='';
+  try{const h=location.hash||'';const mk=h.match(/[#&]k=(g1-pro_[A-Za-z0-9]{8,64}-\d{10}-[A-Fa-f0-9]{32})(?:&|$)/),mj=h.match(/[#&]job=(\d{1,12})(?:&|$)/);
+    if(mk&&keyOk(mk[1])){try{localStorage.setItem('dsc_hubkey',mk[1])}catch(e){}}
+    if(mj)jobParam=mj[1];
+    if(h)history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  if(jobParam){
+    const sj=savedJob();
+    const fillNew=()=>{$('hcpNum').value=jobParam;hcpFill(true)};
+    if(sj&&sj.v&&sj.v.hcpNum===jobParam){offerResume(fillNew);return}      // same job: offer to keep going (Start new job = fill it fresh)
+    offerResume(fillNew);return}                                      // another saved job: ask first; Start new job = open the new one
+  offerResume()}
 function footLine(){const n=$('coName').value.trim()||'Dade Super Cool Air Conditioning',l=['Miami',$('coPhone').value.trim(),$('coLic').value.trim()?'License '+$('coLic').value.trim():''].filter(Boolean);$('ftName').textContent=n;$('ftLine').textContent=l.join(' · ')}
 ['coName','coPhone','coLic'].forEach(id=>$(id).addEventListener('input',footLine));
 // Bluetooth tools are switched off for techs (manual entry only); the owner can open them with ?tools=1 on the page address
 if(/[?&]tools=1(&|$)/.test(location.search)){$('goTools').hidden=false;document.querySelector('#tabbar button[data-go=Tools]').hidden=false}
-onTtype();hjob();gridProg();footLine();showTab('Home');offerResume();
+onTtype();hjob();gridProg();footLine();showTab('Home');hcpBoot();
 </script></body></html>
