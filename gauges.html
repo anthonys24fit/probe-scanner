@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://geocode.arcgis.com https://dsc-tech-jobs.anthonys24fit.workers.dev; img-src data: https://services.arcgisonline.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://geocode.arcgis.com https://dsc-tech-jobs.anthonys24fit.workers.dev; img-src data: blob: https://services.arcgisonline.com">
 <meta name="color-scheme" content="light">
 <title>DSC Gauges</title>
 <style>
@@ -256,6 +256,9 @@ details.fold[open]>summary{border-color:var(--acc)}
 #resume>b:first-child{border-left-color:var(--yel)}
 .mut{color:#4a5565}
 .hcprow{display:flex;gap:8px;align-items:stretch}.hcprow input{flex:1;min-width:0}.hcprow .btn{margin:0;flex:0 0 auto;min-height:56px;padding:0 18px}
+.eqgrid{display:grid;grid-template-columns:1fr;gap:6px;margin:6px 0}.eqh{font-size:14px;color:var(--navy);margin-top:6px}
+.plrow{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:6px 0}.plrow label{margin:0}
+.plpic{display:block;width:100%;max-width:420px;margin:0 auto 10px;border-radius:12px;border:3px solid var(--navy)}
 .brandfoot{text-align:center;margin:22px 8px 8px;color:#4a5565;font-size:13px}
 .brandfoot b{display:block;color:var(--navy);font-size:15px}
 .brandfoot i{display:block;height:5px;margin:0 auto 8px;max-width:160px;border-radius:3px;background:linear-gradient(90deg,#2558fd 0%,#2558fd 38%,#f8d207 50%,#e01b20 62%,#e01b20 100%)}
@@ -283,6 +286,10 @@ body.bigt .helpbtn{font-size:18px;min-height:52px}
 <label for="hcpNum">Job number</label>
 <div class="hcprow"><input id="hcpNum" inputmode="numeric" autocomplete="off" placeholder="e.g. 20174" enterkeyhint="go"><button type="button" class="btn sm" id="hcpGo">Fill it in</button></div>
 <p class="mut" id="hcpMsg" role="status"></p></div>
+<div class="card" id="plateCard"><b>Scan data plate</b>
+<p class="mut">Take a photo of the plate. The page reads it and shows what it found. Nothing is used until you tap &ldquo;Use these&rdquo;, and anything it could not read is left blank for you to type.</p>
+<div class="pin"><div><button type="button" class="btn" id="plateOut">Outdoor unit</button></div><div><button type="button" class="btn" id="plateAh">Air handler</button></div></div>
+<p class="mut" id="plateMsg" role="status"></p></div>
 <div class="card"><b>Job</b>
 <label for="jobName">Job name</label><input id="jobName" autocomplete="off" placeholder="e.g. customer last name or street" enterkeyhint="next">
 <label for="custName">Customer name</label><input id="custName" autocomplete="off" enterkeyhint="next">
@@ -324,6 +331,8 @@ body.bigt .helpbtn{font-size:18px;min-height:52px}
 <details class="fold" id="fNameplate"><summary>Nameplate (only if you will check volts and amps)</summary><div class="card">
 <label for="rv">Rated volts</label><input id="rv" inputmode="decimal" autocomplete="off" placeholder="e.g. 230">
 <div class="pin"><div><label for="cph">Condenser supply</label><select id="cph"><option value="1">Single phase</option><option value="3">Three phase</option></select></div><div><label for="crla">Compressor RLA (not MCA)</label><input id="crla" inputmode="decimal" autocomplete="off"></div></div>
+<div class="eqgrid"><b class="eqh">Outdoor unit</b><input id="eqOutMake" autocomplete="off" placeholder="make" aria-label="Outdoor unit make"><input id="eqOutModel" autocomplete="off" placeholder="model" aria-label="Outdoor unit model"><input id="eqOutSerial" autocomplete="off" placeholder="serial" aria-label="Outdoor unit serial">
+<b class="eqh">Air handler</b><input id="eqAhMake" autocomplete="off" placeholder="make" aria-label="Air handler make"><input id="eqAhModel" autocomplete="off" placeholder="model" aria-label="Air handler model"><input id="eqAhSerial" autocomplete="off" placeholder="serial" aria-label="Air handler serial"></div>
 <label for="cfla">Condenser fan motor FLA (the page adds it to the compressor RLA, so rated amps = the whole outdoor unit)</label><input id="cfla" inputmode="decimal" autocomplete="off" placeholder="from the nameplate, e.g. 1.5">
 <div class="pin"><div><label for="hph">Air handler supply</label><select id="hph"><option value="1">Single phase</option><option value="3">Three phase</option></select></div><div><label for="hfla">Air handler FLA / motor amps</label><input id="hfla" inputmode="decimal" autocomplete="off"></div></div>
 <label for="reer">Rated EER (optional)</label><input id="reer" inputmode="decimal" autocomplete="off">
@@ -510,6 +519,7 @@ body.bigt .helpbtn{font-size:18px;min-height:52px}
 </div>
 
 </main>
+<input type="file" id="plateFile" accept="image/*" capture="environment" hidden>
 <div id="reportView" hidden role="dialog" aria-modal="true" aria-label="Customer report"><div class="rtoolbar rnoprint"><button type="button" id="rptClose" class="ghost">Close</button><button type="button" id="rptPhoto">Use my location</button><button type="button" id="rptPrint">Save / print PDF</button></div><div id="locPanel" class="rnoprint"><b>Aerial photo</b><label for="locAddr">Type the job address</label><div class="locrow"><input id="locAddr" autocomplete="off" placeholder="street, city, state" enterkeyhint="go"><button type="button" id="locFind">Find it</button></div><p class="mut small">The address you type is sent to Esri to find the spot, and the picture comes from Esri.</p><div class="locprev" id="locPrev" hidden><div class="rphwrap"><img id="locThumb" class="rphimg" alt="Preview of the picture, red dot = spot"><div class="rpin"></div></div></div>
 <div class="locmove" id="locMove"><span>Move the picture:</span><button type="button" id="locN" aria-label="Move north">&uarr;</button><button type="button" id="locW" aria-label="Move west">&larr;</button><button type="button" id="locE" aria-label="Move east">&rarr;</button><button type="button" id="locS" aria-label="Move south">&darr;</button><select id="locStep" aria-label="How far each tap moves"><option value="10">small step</option><option value="30" selected>medium step</option><option value="80">big step</option></select><button type="button" id="locIn" aria-label="Zoom in">+</button><button type="button" id="locOut" aria-label="Zoom out">&minus;</button></div><label class="chk" id="locOkRow"><input type="checkbox" id="locOk"><span>I checked: the red dot is on the right house (needed to print a typed or moved picture)</span></label><button type="button" id="locStart" class="locstart">No address? Start from a Miami map</button><p class="mut small" id="locHint">Find the address or use your location first, then move the picture until the red dot sits on the right roof.</p></div><p id="rptMsg" role="status"></p><div id="rpt"></div></div>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="ovTitle"><div class="ovbox"><div class="ovhead"><b id="ovTitle"></b><button type="button" id="ovClose">Close</button></div><div id="ovBody"></div></div></div>
@@ -1157,7 +1167,7 @@ function buildReport(){
   // ===== page 1
   const p1=rEl(R,'section','rpage');rHeader(p1,'Your Air Conditioning System Health Report');
   const info=rEl(p1,'div','rinfo');
-  [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Job number',/^\d{1,12}$/.test($('hcpNum').value.trim())?$('hcpNum').value.trim():''],['Reason for the call',$('callPrint').checked?$('callReason').value.trim():''],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
+  [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Job number',/^\d{1,12}$/.test($('hcpNum').value.trim())?$('hcpNum').value.trim():''],['Outdoor unit',eqText('Out')],['Air handler',eqText('Ah')],['Reason for the call',$('callPrint').checked?$('callReason').value.trim():''],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
   if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo of the job location';img.src=aerial.url;img.onerror=()=>{if(!aerial||img.getAttribute('src')!==aerial.url)return;rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null;locUi()};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));const needOk=aerial.src!=='gps',okd=$('locOk').checked;if(needOk&&!okd){ph.classList.add('rnoprint');ph.appendChild(E('div','rsmall rnoprint','NOT ON THE PRINTED REPORT YET: tick "I checked: the red dot is on the right house" above to include this picture.'))}const how=(needOk&&okd?'Checked by the technician. ':'')+(aerial.src==='gps'?'Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m).':aerial.src==='hcp'?'Aerial view of the job address from Housecall Pro, which can be off by a house or more.':aerial.src==='address'?'Aerial view found from the typed address, which can be off by a house or more.':'Aerial view positioned by the technician.');ph.appendChild(E('div','rsmall',how+' Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
   const v=VERDICT[f.top],vb=rEl(p1,'div','rverdict');vb.style.borderColor=FLAGCOLR[f.top];vb.style.background=f.top==='black'?'#ececec':f.top==='red'?'#fde7e7':f.top==='green'?'#e3f5e8':(f.top==='na'||f.top==='partial')?'#eef1f4':'#fff6d6';
   const vi=rEl(vb,'span','rvico',FLAGICO[f.top]);vi.style.color=FLAGCOLR[f.top];
@@ -1397,6 +1407,58 @@ function hcpBoot(){
     if(sj&&sj.v&&sj.v.hcpNum===jobParam){offerResume(fillNew);return}      // same job: offer to keep going (Start new job = fill it fresh)
     offerResume(fillNew);return}                                      // another saved job: ask first; Start new job = open the new one
   offerResume()}
+// ---- Scan data plate: photo -> Hub -> Claude vision -> fields the tech checks and approves (nothing is used without the tap) ----
+const eqText=w=>{const m=$('eq'+w+'Make').value.trim(),d=$('eq'+w+'Model').value.trim(),n=$('eq'+w+'Serial').value.trim();return [m,d&&n?d+' / '+n:(d||n)].filter(Boolean).join(' ')};
+function plateSay(t){$('plateMsg').textContent=t||''}
+let plateUnit='outdoor',plateBusy=false;
+['plateOut','plateAh'].forEach(id=>$(id).onclick=()=>{if(plateBusy)return;if(!hubKey()){plateSay('This phone is not linked, or the link ran out (it lasts 12 hours). Open this page from "Start gauges test" on your job in the Hub first.');return}plateUnit=id==='plateAh'?'air_handler':'outdoor';$('plateFile').value='';$('plateFile').click()});
+async function plateShrink(file){
+  let bmp=null;
+  try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(e){bmp=null}
+  if(!bmp){bmp=await new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(u);ok(i)};i.onerror=()=>{URL.revokeObjectURL(u);no(new Error('image'))};i.src=u})}
+  const w0=bmp.width||bmp.naturalWidth,h0=bmp.height||bmp.naturalHeight,k=Math.min(1,1400/Math.max(w0,h0));
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w0*k));c.height=Math.max(1,Math.round(h0*k));
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('jpeg')),'image/jpeg',0.85))}
+$('plateFile').addEventListener('change',async()=>{
+  const f=$('plateFile').files&&$('plateFile').files[0];if(!f||plateBusy)return;
+  plateBusy=true;['plateOut','plateAh'].forEach(i=>$(i).disabled=true);plateSay('Reading the plate... this takes about 10 seconds.');
+  const unit=plateUnit,ac=new AbortController(),to=setTimeout(()=>ac.abort(),55000);
+  try{
+    const blob=await plateShrink(f);
+    const r=await fetch(HUB+'/g/'+encodeURIComponent(hubKey())+'/plate?unit='+unit,{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob,signal:ac.signal,cache:'no-store',credentials:'omit'});
+    let j=null;try{j=await r.json()}catch(e){j=null}
+    if(!r.ok||!j||j.ok!==true||!j.fields||typeof j.fields!=='object'){plateSay(r.status===404?'This phone\u2019s link ran out or no longer works. Open the Hub again and use "Start gauges test".':(j&&typeof j.error==='string'?j.error.slice(0,160):'The plate reader did not work. Try again, or type the plate values.'));return}
+    plateSay('');showPlate(j.fields,unit,blob,j.hints&&typeof j.hints==='object'?j.hints:{},j.reader)
+  }catch(e){plateSay(e&&e.name==='AbortError'?'The plate reader took too long. Check your signal and try again.':'Could not read the photo. Try again, or type the plate values.')}
+  finally{clearTimeout(to);plateBusy=false;['plateOut','plateAh'].forEach(i=>$(i).disabled=false)}});
+function showPlate(fl,unit,blob,hints,reader){
+  const str=(v,m)=>typeof v==='string'?v.slice(0,m):'';
+  const F={make:str(fl.make,40),model:str(fl.model,40),serial:str(fl.serial,24),volts:str(fl.volts,8),phase:fl.phase==='1'||fl.phase==='3'?fl.phase:'',rla:str(fl.rla,7),fla:str(fl.fla,7),refrigerant:str(fl.refrigerant,8)};
+  const out=unit==='outdoor',title=out?'Outdoor unit plate':'Air handler plate';
+  openOverlay(title,b=>{
+    const im=document.createElement('img');im.className='plpic';im.alt='Your photo of the plate';im.src=URL.createObjectURL(blob);im.onload=()=>URL.revokeObjectURL(im.src);b.appendChild(im);
+    const p=document.createElement('p');p.className='helptxt';p.textContent='Check each value against the photo. A blank means it could not be read clearly: type it yourself. Look hard at letters vs numbers in the serial and model (1 / I, 0 / O, 6 / G, 7 / J).';b.appendChild(p);
+    const inputs={};
+    [['make','Make'],['model','Model'],['serial','Serial'],['volts','Volts'],['phase','Phase (1 or 3)'],...(out?[['rla','Compressor RLA']]:[]),['fla',out?'Fan motor FLA':'Blower motor FLA'],['refrigerant','Refrigerant']].forEach(([k,lab])=>{
+      const row=document.createElement('div');row.className='plrow';const l=document.createElement('label');l.textContent=lab;const i=document.createElement('input');i.value=F[k];i.autocomplete='off';i.setAttribute('aria-label',lab);if(!F[k]){const h=(k==='make'||k==='model')&&typeof hints[k]==='string'&&/^[A-Za-z0-9 -]{2,30}$/.test(hints[k])?hints[k]:'';i.placeholder=h?'looks like '+h+' - check, then type':'not read'}if(k==='rla'||k==='fla')i.inputMode='decimal';l.htmlFor='';row.appendChild(l);row.appendChild(i);b.appendChild(row);inputs[k]=i});
+    const use=document.createElement('button');use.type='button';use.className='btn big';use.textContent='Use these';
+    use.onclick=()=>{applyPlate(unit,Object.fromEntries(Object.entries(inputs).map(([k,i])=>[k,i.value.trim()])));closeOverlay()};
+    const no=document.createElement('button');no.type='button';no.className='btn ghost';no.textContent='Cancel (use none)';no.onclick=()=>closeOverlay();
+    b.appendChild(use);b.appendChild(no);
+    const n=document.createElement('p');n.className='mut';n.textContent=reader==='google'?'Read by Google for free. The photo is sent to Google only to be read. Its temporary copy is deleted right after, and any leftover is swept on the next scan.':'The photo was sent to Claude to be read and is not kept. Reading costs about one cent.';b.appendChild(n)})}
+function applyPlate(unit,v){
+  const set=(id,val)=>{const e=$(id);if(!e||val===''||val===undefined)return false;e.value=val;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true};
+  const vn=v.volts.match(/\d{2,3}/g)||[],volt=vn.length===1?vn[0]:'';   // '208/230' is two voltages: leave rated volts for the tech
+  const out=unit==='outdoor',w=out?'Out':'Ah',done=[];
+  if(set('eq'+w+'Make',v.make))done.push('make');if(set('eq'+w+'Model',v.model))done.push('model');if(set('eq'+w+'Serial',v.serial))done.push('serial');
+  if(volt&&$('rv').value.trim()==='')if(set('rv',volt))done.push('volts');
+  if(v.phase&&set(out?'cph':'hph',v.phase))done.push('phase');
+  if(out){if(set('crla',v.rla))done.push('compressor RLA');if(set('cfla',v.fla))done.push('fan FLA');
+    if(v.refrigerant&&[...$('ref').options].some(o=>o.value===v.refrigerant)){$('ref').value=v.refrigerant;$('ref').dispatchEvent(new Event('change',{bubbles:true}));done.push('refrigerant')}}
+  else if(set('hfla',v.fla))done.push('blower FLA');   // never the compressor RLA: a wrong number is worse than a blank
+  plateSay((done.length?'Filled in from the plate: '+done.join(', ')+'. Check them in the Nameplate section below.':'Nothing was filled in.')+(vn.length>1&&$('rv').value.trim()===''?' The plate lists '+v.volts+' volts: type the rated volts you have.':''));
+  if(done.length){const f=$('fNameplate');if(f)f.open=true}}
 function footLine(){const n=$('coName').value.trim()||'Dade Super Cool Air Conditioning',l=['Miami',$('coPhone').value.trim(),$('coLic').value.trim()?'License '+$('coLic').value.trim():''].filter(Boolean);$('ftName').textContent=n;$('ftLine').textContent=l.join(' · ')}
 ['coName','coPhone','coLic'].forEach(id=>$(id).addEventListener('input',footLine));
 // Bluetooth tools are switched off for techs (manual entry only); the owner can open them with ?tools=1 on the page address
