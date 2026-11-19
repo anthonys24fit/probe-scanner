@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; img-src data: https://services.arcgisonline.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src https://geocode.arcgis.com; img-src data: https://services.arcgisonline.com">
 <meta name="color-scheme" content="light">
 <title>DSC Gauges</title>
 <style>
@@ -170,6 +170,16 @@ body.ov{overflow:hidden}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 body.rv{overflow:hidden}
+#locPanel{background:#fff;padding:10px 12px;border-bottom:1px solid #d5dae0}
+#locPanel>b{color:var(--navy);font-size:16px}
+#locPanel .locrow{display:flex;gap:8px}
+#locPanel .locrow input{flex:1;min-width:0}
+#locPanel button{border:0;border-radius:12px;background:#2558fd;color:#fff;font:inherit;font-weight:800;font-size:18px;min-height:46px;min-width:46px;padding:0 14px}
+#locPanel button:disabled{opacity:.4}
+.locprev{margin-top:8px}
+.locmove{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.locmove span{font-weight:700;flex:0 0 100%;font-size:14px}
+.locmove select{flex:1;min-width:110px;min-height:46px}
 textarea{font:inherit;font-size:17px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);width:100%;min-height:90px}
 
 #bigBtn{border:1px solid #6f7fb8;background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:6px 10px;min-height:36px;width:auto;flex:0 0 auto}
@@ -484,7 +494,8 @@ body.bigt .btn.big{min-height:72px;font-size:22px}
 </div>
 
 </main>
-<div id="reportView" hidden role="dialog" aria-modal="true" aria-label="Customer report"><div class="rtoolbar rnoprint"><button type="button" id="rptClose" class="ghost">Close</button><button type="button" id="rptPhoto">Get aerial photo (sends my location to Esri)</button><button type="button" id="rptPrint">Save / print PDF</button></div><p id="rptMsg" role="status"></p><div id="rpt"></div></div>
+<div id="reportView" hidden role="dialog" aria-modal="true" aria-label="Customer report"><div class="rtoolbar rnoprint"><button type="button" id="rptClose" class="ghost">Close</button><button type="button" id="rptPhoto">Use my location</button><button type="button" id="rptPrint">Save / print PDF</button></div><div id="locPanel" class="rnoprint"><b>Aerial photo</b><label for="locAddr">Type the job address</label><div class="locrow"><input id="locAddr" autocomplete="off" placeholder="street, city, state" enterkeyhint="go"><button type="button" id="locFind">Find it</button></div><p class="mut small">The address you type is sent to Esri to find the spot, and the picture comes from Esri.</p><div class="locprev" id="locPrev" hidden><div class="rphwrap"><img id="locThumb" class="rphimg" alt="Preview of the picture, red dot = spot"><div class="rpin"></div></div></div>
+<div class="locmove" id="locMove"><span>Move the picture:</span><button type="button" id="locN" aria-label="Move north">&uarr;</button><button type="button" id="locW" aria-label="Move west">&larr;</button><button type="button" id="locE" aria-label="Move east">&rarr;</button><button type="button" id="locS" aria-label="Move south">&darr;</button><select id="locStep" aria-label="How far each tap moves"><option value="10">small step</option><option value="30" selected>medium step</option><option value="80">big step</option></select><button type="button" id="locIn" aria-label="Zoom in">+</button><button type="button" id="locOut" aria-label="Zoom out">&minus;</button></div><label class="chk" id="locOkRow"><input type="checkbox" id="locOk"><span>I checked: the red dot is on the right house (needed to print a typed or moved picture)</span></label><p class="mut small" id="locHint">Find the address or use your location first, then move the picture until the red dot sits on the right roof.</p></div><p id="rptMsg" role="status"></p><div id="rpt"></div></div>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="ovTitle"><div class="ovbox"><div class="ovhead"><b id="ovTitle"></b><button type="button" id="ovClose">Close</button></div><div id="ovBody"></div></div></div>
 <nav id="tabbar" aria-label="Main">
 <button type="button" data-go="Home" aria-current="true"><span class="ti" aria-hidden="true">&#127968;</span>Job</button>
@@ -818,7 +829,7 @@ let clrT=null;
 $('clearAll').onclick=()=>{
   if(!clrT){$('clearAll').textContent='Tap again to clear everything';$('clearMsg').textContent='This clears every box on every tab. Your saved tools stay.';clrT=setTimeout(()=>{clrT=null;$('clearAll').textContent='New job (clear everything)';$('clearMsg').textContent=''},4000);return}
   clearTimeout(clrT);clrT=null;
-  document.querySelectorAll('main input,main textarea').forEach(i=>{if(i.closest('#tTools'))return;if(i.type==='checkbox')i.checked=i.defaultChecked;else i.value=i.defaultValue});aerial=null;
+  document.querySelectorAll('main input,main textarea').forEach(i=>{if(i.closest('#tTools'))return;if(i.type==='checkbox')i.checked=i.defaultChecked;else i.value=i.defaultValue});aerial=null;locSeq++;locEdited=false;$('locAddr').value='';$('locOk').checked=false;locUi();
   document.querySelectorAll('main select').forEach(s=>{const k=[...s.options].findIndex(o=>o.defaultSelected);s.selectedIndex=k<0?0:k});
   $('jobDate').value=todayStr();
   [['rmode','rhl','Return'],['smode','shl','Supply']].forEach(([m,l,nm])=>{$(l).textContent=nm+' RH (%)'});
@@ -1113,7 +1124,7 @@ function buildReport(){
   const p1=rEl(R,'section','rpage');rHeader(p1,'Your Air Conditioning System Health Report');
   const info=rEl(p1,'div','rinfo');
   [['Customer',$('custName').value.trim()],['Address',$('custAddr').value.trim()],['Date',dateTxt],['Technician',$('techName').value.trim()],['Visit',(TT[$('ttype').value]||TT.service)[0]],['Refrigerant',$('ref').value],['Metering device',METERS[$('meter').value]||''],['System size',(()=>{const t=num($('tons').value);return t!==null&&t>0?t+' tons':''})()]].forEach(([k,v])=>{if(!v)return;const r=rEl(info,'div','rrow');r.appendChild(E('span','rk',k));r.appendChild(E('span','rv',v))});
-  if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo near where the technician was standing';img.src=aerial.url;img.onerror=()=>{rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));ph.appendChild(E('div','rsmall','Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m). Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
+  if(aerial){const ph=rEl(p1,'div','rphoto');const wrap=rEl(ph,'div','rphwrap');const img=E('img','rphimg');img.alt='Aerial photo of the job location';img.src=aerial.url;img.onerror=()=>{if(!aerial||img.getAttribute('src')!==aerial.url)return;rMsg('The aerial photo could not be loaded. Check your signal and try again.');ph.remove();aerial=null;locUi()};wrap.appendChild(img);wrap.appendChild(E('div','rpin'));const needOk=aerial.src!=='gps',okd=$('locOk').checked;if(needOk&&!okd){ph.classList.add('rnoprint');ph.appendChild(E('div','rsmall rnoprint','NOT ON THE PRINTED REPORT YET: tick "I checked: the red dot is on the right house" above to include this picture.'))}const how=(needOk&&okd?'Checked by the technician. ':'')+(aerial.src==='gps'?'Aerial view centered on where the technician was standing (phone location, accurate to about '+Math.round(aerial.acc)+' m).':aerial.src==='address'?'Aerial view found from the typed address, which can be off by a house or more.':'Aerial view positioned by the technician.');ph.appendChild(E('div','rsmall',how+' Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community.'))}
   const v=VERDICT[f.top],vb=rEl(p1,'div','rverdict');vb.style.borderColor=FLAGCOLR[f.top];vb.style.background=f.top==='black'?'#ececec':f.top==='red'?'#fde7e7':f.top==='green'?'#e3f5e8':(f.top==='na'||f.top==='partial')?'#eef1f4':'#fff6d6';
   const vi=rEl(vb,'span','rvico',FLAGICO[f.top]);vi.style.color=FLAGCOLR[f.top];
   const vt=rEl(vb,'div','rvtxt');vt.appendChild(E('b','',v[0]));vt.appendChild(E('div','',v[1]));
@@ -1163,15 +1174,49 @@ function buildReport(){
 $('reportBtn').onclick=()=>{buildReport();$('reportView').hidden=false;document.body.classList.add('rv');$('reportView').scrollTop=0;stepStrip('Report')};
 $('rptClose').onclick=()=>{$('reportView').hidden=true;document.body.classList.remove('rv');const t=TABS.find(x=>!$('t'+x).hidden)||'Home';stepStrip(t)};
 $('rptPrint').onclick=()=>{buildReport();window.print()};
+function aerialUrl(a){const lat=a.lat,lon=a.lon,W=a.W,hw=(W/2)/Math.cos(lat*Math.PI/180),hh=hw*360/640;
+  const mx=lon*111319.49079327357,my=Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))*6378137;
+  return 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox='+[mx-hw,my-hh,mx+hw,my+hh].map(x=>x.toFixed(2)).join(',')+'&bboxSR=3857&imageSR=3857&size=640,360&format=jpg&f=image'}
+let locSeq=0,locEdited=false;
+function setAerial(lat,lon,W,src,acc,label){
+  if(!(isFinite(lat)&&isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180))return false;
+  aerial={lat:lat,lon:lon,W:W,src:src,acc:acc,label:label||'',url:null};$('locOk').checked=false;aerial.url=aerialUrl(aerial);locUi();buildReport();return true}
+function locUi(){const on=!!aerial;$('locPrev').hidden=!on;if(on&&$('locThumb').getAttribute('src')!==aerial.url)$('locThumb').src=aerial.url;['locN','locS','locE','locW','locIn','locOut'].forEach(id=>{$(id).disabled=!on});
+  $('locHint').textContent=on?'Tap the arrows to move the picture until the red dot sits on the right roof. + and - zoom.':'Find the address or use your location first, then move the picture until the red dot sits on the right roof.'}
+function nudge(dx,dy){if(!aerial)return;locSeq++;const m=parseFloat($('locStep').value)*(aerial.W/130);const lat=aerial.lat+dy*m/111320,lon=aerial.lon+dx*m/(111320*Math.cos(aerial.lat*Math.PI/180));setAerial(lat,lon,aerial.W,'moved',null,aerial.label)}
+$('locN').onclick=()=>nudge(0,1);$('locS').onclick=()=>nudge(0,-1);$('locE').onclick=()=>nudge(1,0);$('locW').onclick=()=>nudge(-1,0);
+$('locIn').onclick=()=>{if(aerial){locSeq++;$('locOk').checked=false}if(aerial)setAerial(aerial.lat,aerial.lon,Math.max(40,aerial.W/2),aerial.src,aerial.acc,aerial.label)};
+$('locOut').onclick=()=>{if(aerial){locSeq++;$('locOk').checked=false}if(aerial)setAerial(aerial.lat,aerial.lon,Math.min(520,aerial.W*2),aerial.src,aerial.acc,aerial.label)};
+async function findAddr(){
+  if($('locFind').disabled)return;
+  const q=$('locAddr').value.trim(),seq=++locSeq;
+  if(q.length<6){rMsg('Type the street address, city and state first.');return}
+  rMsg('Looking up that address at Esri...');$('locFind').disabled=true;
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000);
+  try{
+    const r=await fetch('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&countryCode=USA&location=-80.2,25.8&outFields=Addr_type&singleLine='+encodeURIComponent(q),{signal:ac.signal});
+    if(!r.ok)throw new Error('lookup answered '+r.status);
+    const j=await r.json();
+    if(seq!==locSeq)return;
+    if(j&&j.error){rMsg('The address finder is not available right now. Use your location and the arrows instead.');return}
+    const c=j&&Array.isArray(j.candidates)?j.candidates[0]:null;
+    if(c&&!(c.attributes&&['PointAddress','Subaddress','StreetAddress','StreetAddressExt'].includes(c.attributes.Addr_type))){rMsg('That matched a street, town or ZIP code, not one house. Type the house number, street, city and state.');return}
+    if(!c||!c.location||!isFinite(c.location.x)||!isFinite(c.location.y)||!(c.score>=80)){rMsg('Esri could not find that address closely enough. Add the city and state, or use your location and the arrows.');return}
+    if(seq!==locSeq)return;
+    if(setAerial(c.location.y,c.location.x,130,'address',null,q))rMsg('Found: '+(typeof c.address==='string'?c.address:q)+'. Check the red dot, and move the picture if it is not on the right roof.');
+    else rMsg('Esri returned a place this page cannot use. Try again with the full address.');
+  }catch(e){rMsg(e&&e.name==='AbortError'?'The address lookup took too long. Check your signal and try again.':'The address lookup did not work (no signal or blocked). You can still use your location and the arrows.')}
+  finally{clearTimeout(to);$('locFind').disabled=false}}
+$('locFind').onclick=findAddr;
+$('locAddr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findAddr()}});
 $('rptPhoto').onclick=()=>{
-  if(!navigator.geolocation){rMsg('This browser cannot give a location.');return}
+  const seq=++locSeq;
+  if(!navigator.geolocation){rMsg('This browser cannot give a location. Type the address instead.');return}
   rMsg('Finding your position... (your phone location is sent to Esri to get the picture)');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat=pos.coords.latitude,lon=pos.coords.longitude,W=130,hw=(W/2)/Math.cos(lat*Math.PI/180),hh=hw*360/640;
-    const mx=lon*111319.49079327357,my=Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))*6378137;
-    aerial={url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox='+[mx-hw,my-hh,mx+hw,my+hh].map(x=>x.toFixed(2)).join(',')+'&bboxSR=3857&imageSR=3857&size=640,360&format=jpg&f=image',acc:pos.coords.accuracy};
-    buildReport();
-  },err=>rMsg('Could not get your location: '+(err&&err.message?err.message:'permission was not given')+'. Allow location for this page and try again.'),{enableHighAccuracy:true,timeout:15000,maximumAge:0})};
+  navigator.geolocation.getCurrentPosition(pos=>{if(seq!==locSeq)return;setAerial(pos.coords.latitude,pos.coords.longitude,130,'gps',pos.coords.accuracy,'')},err=>{if(seq!==locSeq)return;rMsg('Could not get your location: '+(err&&err.message?err.message:'permission was not given')+'. Allow location, or type the address instead.')},{enableHighAccuracy:true,timeout:15000,maximumAge:0})};
+$('locAddr').addEventListener('input',()=>{locEdited=true});
+$('locOk').addEventListener('change',()=>{if(aerial)buildReport()});
+$('reportBtn').addEventListener('click',()=>{if(!locEdited)$('locAddr').value=$('custAddr').value.trim();locUi()});
 renderTools();
 window.__ready=true;updateFlagBtns();
 // ---- field helpers: Next key, tile progress, bigger text, auto-save of the job ----
