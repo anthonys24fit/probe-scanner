@@ -176,7 +176,8 @@ body.rv{overflow:hidden}
 #locPanel .locrow input{flex:1;min-width:0}
 #locPanel button{border:0;border-radius:12px;background:#2558fd;color:#fff;font:inherit;font-weight:800;font-size:18px;min-height:46px;min-width:46px;padding:0 14px}
 #locPanel button:disabled{opacity:.4}
-.locprev{margin-top:8px}
+.locprev{margin-top:8px}.locprev .rphwrap{touch-action:none;cursor:grab}
+#locPanel .locstart{background:#fff;color:#071133;border:2px solid #071133;margin-top:8px;width:100%;font-size:16px}
 .locmove{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
 .locmove span{font-weight:700;flex:0 0 100%;font-size:14px}
 .locmove select{flex:1;min-width:110px;min-height:46px}
@@ -495,7 +496,7 @@ body.bigt .btn.big{min-height:72px;font-size:22px}
 
 </main>
 <div id="reportView" hidden role="dialog" aria-modal="true" aria-label="Customer report"><div class="rtoolbar rnoprint"><button type="button" id="rptClose" class="ghost">Close</button><button type="button" id="rptPhoto">Use my location</button><button type="button" id="rptPrint">Save / print PDF</button></div><div id="locPanel" class="rnoprint"><b>Aerial photo</b><label for="locAddr">Type the job address</label><div class="locrow"><input id="locAddr" autocomplete="off" placeholder="street, city, state" enterkeyhint="go"><button type="button" id="locFind">Find it</button></div><p class="mut small">The address you type is sent to Esri to find the spot, and the picture comes from Esri.</p><div class="locprev" id="locPrev" hidden><div class="rphwrap"><img id="locThumb" class="rphimg" alt="Preview of the picture, red dot = spot"><div class="rpin"></div></div></div>
-<div class="locmove" id="locMove"><span>Move the picture:</span><button type="button" id="locN" aria-label="Move north">&uarr;</button><button type="button" id="locW" aria-label="Move west">&larr;</button><button type="button" id="locE" aria-label="Move east">&rarr;</button><button type="button" id="locS" aria-label="Move south">&darr;</button><select id="locStep" aria-label="How far each tap moves"><option value="10">small step</option><option value="30" selected>medium step</option><option value="80">big step</option></select><button type="button" id="locIn" aria-label="Zoom in">+</button><button type="button" id="locOut" aria-label="Zoom out">&minus;</button></div><label class="chk" id="locOkRow"><input type="checkbox" id="locOk"><span>I checked: the red dot is on the right house (needed to print a typed or moved picture)</span></label><p class="mut small" id="locHint">Find the address or use your location first, then move the picture until the red dot sits on the right roof.</p></div><p id="rptMsg" role="status"></p><div id="rpt"></div></div>
+<div class="locmove" id="locMove"><span>Move the picture:</span><button type="button" id="locN" aria-label="Move north">&uarr;</button><button type="button" id="locW" aria-label="Move west">&larr;</button><button type="button" id="locE" aria-label="Move east">&rarr;</button><button type="button" id="locS" aria-label="Move south">&darr;</button><select id="locStep" aria-label="How far each tap moves"><option value="10">small step</option><option value="30" selected>medium step</option><option value="80">big step</option></select><button type="button" id="locIn" aria-label="Zoom in">+</button><button type="button" id="locOut" aria-label="Zoom out">&minus;</button></div><label class="chk" id="locOkRow"><input type="checkbox" id="locOk"><span>I checked: the red dot is on the right house (needed to print a typed or moved picture)</span></label><button type="button" id="locStart" class="locstart">No address? Start from a Miami map</button><p class="mut small" id="locHint">Find the address or use your location first, then move the picture until the red dot sits on the right roof.</p></div><p id="rptMsg" role="status"></p><div id="rpt"></div></div>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="ovTitle"><div class="ovbox"><div class="ovhead"><b id="ovTitle"></b><button type="button" id="ovClose">Close</button></div><div id="ovBody"></div></div></div>
 <nav id="tabbar" aria-label="Main">
 <button type="button" data-go="Home" aria-current="true"><span class="ti" aria-hidden="true">&#127968;</span>Job</button>
@@ -1181,8 +1182,8 @@ let locSeq=0,locEdited=false;
 function setAerial(lat,lon,W,src,acc,label){
   if(!(isFinite(lat)&&isFinite(lon)&&Math.abs(lat)<=85&&Math.abs(lon)<=180))return false;
   aerial={lat:lat,lon:lon,W:W,src:src,acc:acc,label:label||'',url:null};$('locOk').checked=false;aerial.url=aerialUrl(aerial);locUi();buildReport();return true}
-function locUi(){const on=!!aerial;$('locPrev').hidden=!on;if(on&&$('locThumb').getAttribute('src')!==aerial.url)$('locThumb').src=aerial.url;['locN','locS','locE','locW','locIn','locOut'].forEach(id=>{$(id).disabled=!on});
-  $('locHint').textContent=on?'Tap the arrows to move the picture until the red dot sits on the right roof. + and - zoom.':'Find the address or use your location first, then move the picture until the red dot sits on the right roof.'}
+function locUi(){const on=!!aerial;$('locPrev').hidden=!on;$('locStart').hidden=on;if(on&&$('locThumb').getAttribute('src')!==aerial.url)$('locThumb').src=aerial.url;['locN','locS','locE','locW','locIn','locOut'].forEach(id=>{$(id).disabled=!on});
+  $('locHint').textContent=on?'Drag the picture, or tap the roof, to put the red dot on the right house. The arrows and + / - fine-tune it.':'Find the address or use your location first, then move the picture until the red dot sits on the right roof.'}
 function nudge(dx,dy){if(!aerial)return;locSeq++;const m=parseFloat($('locStep').value)*(aerial.W/130);const lat=aerial.lat+dy*m/111320,lon=aerial.lon+dx*m/(111320*Math.cos(aerial.lat*Math.PI/180));setAerial(lat,lon,aerial.W,'moved',null,aerial.label)}
 $('locN').onclick=()=>nudge(0,1);$('locS').onclick=()=>nudge(0,-1);$('locE').onclick=()=>nudge(1,0);$('locW').onclick=()=>nudge(-1,0);
 $('locIn').onclick=()=>{if(aerial){locSeq++;$('locOk').checked=false}if(aerial)setAerial(aerial.lat,aerial.lon,Math.max(40,aerial.W/2),aerial.src,aerial.acc,aerial.label)};
@@ -1208,6 +1209,20 @@ async function findAddr(){
   }catch(e){rMsg(e&&e.name==='AbortError'?'The address lookup took too long. Check your signal and try again.':'The address lookup did not work (no signal or blocked). You can still use your location and the arrows.')}
   finally{clearTimeout(to);$('locFind').disabled=false}}
 $('locFind').onclick=findAddr;
+$('locStart').onclick=()=>{locSeq++;rMsg('');setAerial(25.7743,-80.1937,520,'moved',null,'')};
+(function(){const box=$('locThumb').parentNode,im=$('locThumb');let d=null;
+  const reset=()=>{d=null;im.style.transform=''};
+  box.addEventListener('pointerdown',e=>{if(!aerial||d)return;d={x:e.clientX,y:e.clientY,id:e.pointerId};try{box.setPointerCapture(e.pointerId)}catch(x){}});
+  box.addEventListener('pointermove',e=>{if(d&&e.pointerId===d.id)im.style.transform='translate('+(e.clientX-d.x)+'px,'+(e.clientY-d.y)+'px)'});
+  box.addEventListener('pointercancel',e=>{if(d&&e.pointerId===d.id)reset()});
+  box.addEventListener('lostpointercapture',e=>{if(d&&e.pointerId===d.id)reset()});
+  box.addEventListener('pointerup',e=>{if(!d||!aerial||e.pointerId!==d.id){return}
+    const r=box.getBoundingClientRect(),mpp=aerial.W/Math.max(1,r.width),dx=e.clientX-d.x,dy=e.clientY-d.y;reset();
+    let ex,nn;
+    if(Math.hypot(dx,dy)<8){ex=(e.clientX-(r.left+r.width/2))*mpp;nn=-(e.clientY-(r.top+r.height/2))*mpp}
+    else{ex=-dx*mpp;nn=dy*mpp}
+    locSeq++;rMsg('');
+    setAerial(aerial.lat+nn/111320,aerial.lon+ex/(111320*Math.cos(aerial.lat*Math.PI/180)),aerial.W,'moved',null,aerial.label)})})();
 $('locAddr').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findAddr()}});
 $('rptPhoto').onclick=()=>{
   const seq=++locSeq;
